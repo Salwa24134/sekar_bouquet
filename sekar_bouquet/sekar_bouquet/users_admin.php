@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 include 'koneksi.php';
 
 /* =========================
@@ -11,18 +13,28 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 }
 
 /* =========================
-   DELETE USER
+   DELETE USER (MySQLi)
 ========================= */
 if (isset($_GET['delete'])) {
+    // Pastikan ID berupa integer untuk keamanan tambahan
+    $id = (int)$_GET['delete']; 
 
-    $id = $_GET['delete'];
+    // Ambil data untuk validasi role sebelum dihapus (safety check)
+    $cekSql = "SELECT role FROM users WHERE id = ?";
+    $stmtCheck = $koneksi->prepare($cekSql);
+    $stmtCheck->bind_param("i", $id);
+    $stmtCheck->execute();
+    $resultCheck = $stmtCheck->get_result();
+    $data = $resultCheck->fetch_assoc();
+    $stmtCheck->close();
 
-    // jangan boleh hapus admin utama (opsional safety)
-    $cek = sqlsrv_query($koneksi, "SELECT role FROM users WHERE id = ?", [$id]);
-    $data = sqlsrv_fetch_array($cek, SQLSRV_FETCH_ASSOC);
-
+    // Jangan boleh hapus jika user bermenu role 'admin'
     if ($data && $data['role'] != 'admin') {
-        sqlsrv_query($koneksi, "DELETE FROM users WHERE id = ?", [$id]);
+        $delSql = "DELETE FROM users WHERE id = ?";
+        $stmtDel = $koneksi->prepare($delSql);
+        $stmtDel->bind_param("i", $id);
+        $stmtDel->execute();
+        $stmtDel->close();
     }
 
     header("Location: users_admin.php");
@@ -30,105 +42,105 @@ if (isset($_GET['delete'])) {
 }
 
 /* =========================
-   DATA USERS
+   DATA USERS (MySQLi)
 ========================= */
 $sql = "SELECT * FROM users ORDER BY id DESC";
-$data = sqlsrv_query($koneksi, $sql);
+$resultData = $koneksi->query($sql);
 ?>
 
 <!DOCTYPE html>
 <html lang="id">
 
 <head>
-<meta charset="UTF-8">
-<title>Users Admin - Sekar Bouquet</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users Admin - Sekar Bouquet</title>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
-<style>
-body {
-    font-family: 'Poppins', sans-serif;
-    background: #fff4f7;
-}
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #fff4f7;
+        }
 
-h2, h3 {
-    font-family: 'Playfair Display', serif;
-    color: #b76e79;
-}
+        h2, h3 {
+            font-family: 'Playfair Display', serif;
+            color: #b76e79;
+        }
 
-/* SIDEBAR */
-.sidebar {
-    width: 250px;
-    height: 100vh;
-    background: linear-gradient(135deg, #b76e79, #8d4f5c);
-    position: fixed;
-    padding: 20px;
-    color: white;
-}
+        /* SIDEBAR */
+        .sidebar {
+            width: 250px;
+            height: 100vh;
+            background: linear-gradient(135deg, #b76e79, #8d4f5c);
+            position: fixed;
+            padding: 20px;
+            color: white;
+        }
 
-.sidebar a {
-    display: block;
-    color: white;
-    padding: 10px;
-    text-decoration: none;
-    border-radius: 10px;
-    margin-bottom: 10px;
-}
+        .sidebar a {
+            display: block;
+            color: white;
+            padding: 10px;
+            text-decoration: none;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
 
-.sidebar a:hover {
-    background: rgba(255,255,255,0.2);
-}
+        .sidebar a:hover {
+            background: rgba(255,255,255,0.2);
+        }
 
-/* MAIN */
-.main {
-    margin-left: 260px;
-    padding: 30px;
-}
+        /* MAIN */
+        .main {
+            margin-left: 260px;
+            padding: 30px;
+        }
 
-.card-box {
-    border: none;
-    border-radius: 18px;
-    box-shadow: 0 10px 25px rgba(183,110,121,0.15);
-}
+        .card-box {
+            border: none;
+            border-radius: 18px;
+            box-shadow: 0 10px 25px rgba(183,110,121,0.15);
+        }
 
-/* ROLE BADGE */
-.badge-user {
-    background: #0d6efd;
-}
+        /* ROLE BADGE */
+        .badge-user {
+            background-color: #0d6efd;
+            color: white;
+        }
 
-.badge-admin {
-    background: #b76e79;
-}
+        .badge-admin {
+            background-color: #b76e79;
+            color: white;
+        }
 
-.btn-main {
-    background: linear-gradient(135deg, #d88b9c, #b76e79);
-    color: white;
-    border: none;
-}
+        .btn-main {
+            background: linear-gradient(135deg, #d88b9c, #b76e79);
+            color: white;
+            border: none;
+        }
 
-.btn-main:hover {
-    color: white;
-}
+        .btn-main:hover {
+            color: white;
+        }
 
-.user-avatar {
-    width: 45px;
-    height: 45px;
-    object-fit: cover;
-    border-radius: 50%;
-    border: 2px solid #f1c9d2;
-}
-</style>
-
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 2px solid #f1c9d2;
+        }
+    </style>
 </head>
 
 <body>
 
-<!-- SIDEBAR -->
 <div class="sidebar">
     <h3 class="mb-4">🌸 Sekar Admin</h3>
-
     <a href="admin.php">Dashboard</a>
     <a href="produk_admin.php">Produk</a>
     <a href="pesanan_admin.php">Pesanan</a>
@@ -136,74 +148,72 @@ h2, h3 {
     <a href="logout.php">Logout</a>
 </div>
 
-<!-- MAIN -->
 <div class="main">
 
-<h2 class="mb-4">Manajemen User 👥</h2>
+    <h2 class="mb-4">Manajemen User 👥</h2>
 
-<div class="card card-box p-4">
+    <div class="card card-box p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Foto</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Telp</th>
+                        <th>Role</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
 
-<table class="table table-hover align-middle">
+                <?php 
+                if ($resultData && $resultData->num_rows > 0) {
+                    while ($row = $resultData->fetch_assoc()) { 
+                ?>
+                        <tr>
+                            <td>
+                                <img src="assets/gambar/<?= !empty($row['foto']) ? htmlspecialchars($row['foto']) : 'default.png'; ?>"
+                                     class="user-avatar" alt="Avatar">
+                            </td>
 
-<thead>
-<tr>
-    <th>Foto</th>
-    <th>Username</th>
-    <th>Email</th>
-    <th>Telp</th>
-    <th>Role</th>
-    <th>Aksi</th>
-</tr>
-</thead>
+                            <td><?= htmlspecialchars($row['username']); ?></td>
+                            <td><?= htmlspecialchars($row['email']); ?></td>
+                            <td><?= htmlspecialchars($row['telp'] ?? '-'); ?></td>
 
-<tbody>
+                            <td>
+                                <?php if ($row['role'] == 'admin') { ?>
+                                    <span class="badge badge-admin">Admin</span>
+                                <?php } else { ?>
+                                    <span class="badge badge-user">User</span>
+                                <?php } ?>
+                            </td>
 
-<?php while ($row = sqlsrv_fetch_array($data, SQLSRV_FETCH_ASSOC)) { ?>
+                            <td>
+                                <?php if ($row['role'] != 'admin') { ?>
+                                    <a href="?delete=<?= urlencode($row['id']); ?>"
+                                       class="btn btn-sm btn-danger"
+                                       onclick="return confirm('Hapus user ini?')">
+                                        Hapus
+                                    </a>
+                                <?php } else { ?>
+                                    <span class="text-muted">Protected</span>
+                                <?php } ?>
+                            </td>
+                        </tr>
+                    <?php 
+                    }
+                } else { 
+                ?>
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">Tidak ada data user.</td>
+                    </tr>
+                <?php } ?>
 
-<tr>
-
-<td>
-    <img src="assets/gambar/<?= $row['foto'] ? $row['foto'] : 'default.png' ?>"
-         class="user-avatar">
-</td>
-
-<td><?= $row['username'] ?></td>
-
-<td><?= $row['email'] ?></td>
-
-<td><?= $row['telp'] ?? '-' ?></td>
-
-<td>
-    <?php if ($row['role'] == 'admin') { ?>
-        <span class="badge badge-admin">Admin</span>
-    <?php } else { ?>
-        <span class="badge badge-user">User</span>
-    <?php } ?>
-</td>
-
-<td>
-
-<?php if ($row['role'] != 'admin') { ?>
-    <a href="?delete=<?= $row['id'] ?>"
-       class="btn btn-sm btn-danger"
-       onclick="return confirm('Hapus user ini?')">
-        Hapus
-    </a>
-<?php } else { ?>
-    <span class="text-muted">Protected</span>
-<?php } ?>
-
-</td>
-
-</tr>
-
-<?php } ?>
-
-</tbody>
-
-</table>
-
-</div>
+                </tbody>
+            </table>
+        </div>
+    </div>
 
 </div>
 

@@ -3,7 +3,9 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-/* cek login */
+/**
+ * Cek apakah user sudah login
+ */
 function auth() {
     if (!isset($_SESSION['user'])) {
         header("Location: login.php");
@@ -11,17 +13,24 @@ function auth() {
     }
 }
 
-/* cek role admin */
+/**
+ * Cek apakah user yang login adalah admin
+ */
 function adminOnly() {
-    auth();
+    auth(); // Pastikan login dulu
 
-    if ($_SESSION['user']['role'] !== 'admin') {
+    // Menyesuaikan dengan struktur session dari halaman admin sebelumnya
+    // di mana role dicek via $_SESSION['role'] atau $_SESSION['user']['role']
+    if ((isset($_SESSION['role']) && $_SESSION['role'] !== 'admin') && 
+        (isset($_SESSION['user']['role']) && $_SESSION['user']['role'] !== 'admin')) {
         header("Location: index.php");
         exit();
     }
 }
 
-/* ambil user login */
+/**
+ * Mengambil data user yang sedang login
+ */
 function user() {
     return $_SESSION['user'] ?? null;
 }

@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 include 'koneksi.php';
 ?>
 
@@ -8,6 +10,7 @@ include 'koneksi.php';
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sekar Bouquet - Toko Bouquet Premium</title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
@@ -64,7 +67,6 @@ include 'koneksi.php';
 
 <?php include 'layout/header.php'; ?>
 
-<!-- HERO -->
 <div class="text-center py-5" style="background:#fff0f3;">
     <div class="container">
         <h1 class="fw-bold">Sekar Bouquet 🌸</h1>
@@ -77,7 +79,6 @@ include 'koneksi.php';
     </div>
 </div>
 
-<!-- FEATURE -->
 <div class="container my-5">
     <div class="row text-center g-4">
         <div class="col-md-4">
@@ -106,25 +107,26 @@ include 'koneksi.php';
     </div>
 </div>
 
-<!-- PRODUK -->
 <div class="container my-5">
     <h2 class="text-center mb-4">Bouquet Terlaris 💐</h2>
 
     <div class="row g-4">
 
         <?php
-        $sql = "SELECT TOP 4 * FROM produk";
-        $result = sqlsrv_query($koneksi, $sql);
+        // Mengubah sintaks SQL Server (SELECT TOP 4) menjadi sintaks khas MySQL (LIMIT 4)
+        $sql = "SELECT * FROM produk LIMIT 4";
+        $result = $koneksi->query($sql);
 
-        if ($result):
-            while ($row = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)):
+        if ($result && $result->num_rows > 0):
+            while ($row = $result->fetch_assoc()):
         ?>
 
         <div class="col-md-3">
             <div class="card product-card shadow-sm h-100">
-                <img src="assets/gambar/<?php echo $row['gambar']; ?>"
+                <img src="assets/gambar/<?php echo htmlspecialchars($row['gambar']); ?>"
                      class="card-img-top"
-                     style="height:220px;object-fit:cover;">
+                     style="height:220px;object-fit:cover;"
+                     alt="<?php echo htmlspecialchars($row['nama']); ?>">
 
                 <div class="card-body text-center">
                     <h5 class="fw-bold"><?php echo htmlspecialchars($row['nama']); ?></h5>
@@ -146,7 +148,6 @@ include 'koneksi.php';
     </div>
 </div>
 
-<!-- CTA -->
 <div class="text-center py-5" style="background:#b76e79; color:white;">
     <h2 class="text-white">Pesan Bouquet Sekarang 🌸</h2>
     <p>Abadikan momen spesial dengan bunga terbaik</p>
@@ -155,7 +156,6 @@ include 'koneksi.php';
     </a>
 </div>
 
-<!-- ABOUT -->
 <div class="container my-5 text-center">
     <h2>Tentang Sekar Bouquet</h2>
     <p class="text-muted">

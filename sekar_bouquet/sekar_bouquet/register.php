@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 include 'koneksi.php';
 
 if (isset($_POST['register'])) {
@@ -15,17 +17,24 @@ if (isset($_POST['register'])) {
         mkdir($uploadDir, 0777, true);
     }
 
-    // CEK USERNAME
+    /* =========================
+       CEK USERNAME (MySQLi)
+    ========================= */
     $checkSql = "SELECT username FROM users WHERE username = ?";
-    $checkParams = array($username);
+    $stmtCheck = $koneksi->prepare($checkSql);
+    $stmtCheck->bind_param("s", $username);
+    $stmtCheck->execute();
+    $checkResult = $stmtCheck->get_result();
 
-    $checkResult = sqlsrv_query($koneksi, $checkSql, $checkParams);
-
-    if ($checkResult && sqlsrv_fetch_array($checkResult, SQLSRV_FETCH_ASSOC)) {
+    if ($checkResult && $checkResult->num_rows > 0) {
         $error = "Username sudah digunakan!";
+        $stmtCheck->close();
     } else {
+        $stmtCheck->close();
 
-        // CEK FILE UPLOAD
+        /* =========================
+           CEK FILE UPLOAD
+        ========================= */
         if (!isset($_FILES['foto']) || $_FILES['foto']['error'] != 0) {
             $error = "Foto wajib diupload!";
         } else {
@@ -35,18 +44,19 @@ if (isset($_POST['register'])) {
 
             if (move_uploaded_file($tmp, $uploadDir . $fotoName)) {
 
-                $sql = "INSERT INTO users (username, email, password, role, foto)
-                        VALUES (?, ?, ?, ?, ?)";
+                /* =========================
+                   INSERT DATABASE (MySQLi)
+                ========================= */
+                $sql = "INSERT INTO users (username, email, password, role, foto) VALUES (?, ?, ?, ?, ?)";
+                $stmtIns = $koneksi->prepare($sql);
+                $stmtIns->bind_param("sssss", $username, $email, $password, $role, $fotoName);
 
-                $params = array($username, $email, $password, $role, $fotoName);
-
-                $result = sqlsrv_query($koneksi, $sql, $params);
-
-                if ($result) {
+                if ($stmtIns->execute()) {
                     $success = "Akun berhasil dibuat!";
                 } else {
                     $error = "Gagal membuat akun!";
                 }
+                $stmtIns->close();
 
             } else {
                 $error = "Upload foto gagal!";
@@ -60,28 +70,20 @@ if (isset($_POST['register'])) {
 <html lang="id">
 
 <head>
-
     <meta charset="UTF-8">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - Sekar Bouquet</title>
 
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Playfair+Display:wght@700&display=swap"
-          rel="stylesheet">
-
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
     <style>
-
         body {
             background:
                 linear-gradient(rgba(255,255,255,0.55),
                 rgba(255,255,255,0.55)),
                 url('assets/gambar/bg-bouquet.jpg');
-
             background-size: cover;
             background-position: center;
             font-family: 'Poppins', sans-serif;
@@ -184,9 +186,7 @@ if (isset($_POST['register'])) {
         .form-text {
             color: #8a6f77;
         }
-
     </style>
-
 </head>
 
 <body class="d-flex flex-column min-vh-100">
@@ -194,205 +194,95 @@ if (isset($_POST['register'])) {
 <?php include 'layout/header.php'; ?>
 
 <div class="container flex-grow-1 d-flex align-items-center justify-content-center py-5">
-
     <div class="row w-100 justify-content-center">
-
         <div class="col-md-7 col-lg-5">
 
             <div class="card register-card">
-
                 <div class="text-center mb-4">
-
-                    <img src="assets/gambar/logo.jpeg"
-                         alt="Sekar Bouquet"
-                         class="register-logo">
-
-                    <h2 class="register-title">
-                        Buat Akun Baru
-                    </h2>
-
+                    <img src="assets/gambar/logo.jpeg" alt="Sekar Bouquet" class="register-logo">
+                    <h2 class="register-title">Buat Akun Baru</h2>
                     <p class="register-subtitle">
                         Gabung bersama Sekar Bouquet dan temukan bunga favoritmu 🌷
                     </p>
-
                 </div>
 
                 <?php if (isset($success)) : ?>
-
                     <div class="alert alert-success text-center fw-bold small">
-
                         <i class="fa-solid fa-circle-check me-2"></i>
-
-                        <?php echo $success; ?>
-
+                        <?php echo htmlspecialchars($success); ?>
                         <div class="mt-2">
-
-                            <a href="login.php"
-                               class="login-link">
-
-                                Login sekarang
-
-                            </a>
-
+                            <a href="login.php" class="login-link">Login sekarang</a>
                         </div>
-
                     </div>
-
                 <?php endif; ?>
 
                 <?php if (isset($error)) : ?>
-
                     <div class="alert alert-danger text-center fw-bold small">
-
                         <i class="fa-solid fa-circle-exclamation me-2"></i>
-
-                        <?php echo $error; ?>
-
+                        <?php echo htmlspecialchars($error); ?>
                     </div>
-
                 <?php endif; ?>
 
                 <form method="post" enctype="multipart/form-data">
 
                     <div class="mb-3">
-
-                        <label class="form-label">
-                            Username
-                        </label>
-
+                        <label class="form-label">Username</label>
                         <div class="input-group">
-
-                            <span class="input-group-text">
-                                <i class="fa-solid fa-user"></i>
-                            </span>
-
-                            <input
-                                type="text"
-                                name="username"
-                                class="form-control"
-                                placeholder="Masukkan username"
-                                required>
-
+                            <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+                            <input type="text" name="username" class="form-control" 
+                                   placeholder="Masukkan username" required>
                         </div>
-
                     </div>
 
                     <div class="mb-3">
-
-                        <label class="form-label">
-                            Email
-                        </label>
-
+                        <label class="form-label">Email</label>
                         <div class="input-group">
-
-                            <span class="input-group-text">
-                                <i class="fa-solid fa-envelope"></i>
-                            </span>
-
-                            <input
-                                type="email"
-                                name="email"
-                                class="form-control"
-                                placeholder="Masukkan email aktif"
-                                required>
-
+                            <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                            <input type="email" name="email" class="form-control" 
+                                   placeholder="Masukkan email aktif" required>
                         </div>
-
                     </div>
 
                     <div class="mb-3">
-
-                        <label class="form-label">
-                            Password
-                        </label>
-
+                        <label class="form-label">Password</label>
                         <div class="input-group">
-
-                            <span class="input-group-text">
-                                <i class="fa-solid fa-lock"></i>
-                            </span>
-
-                            <input
-                                type="password"
-                                name="password"
-                                class="form-control"
-                                placeholder="Buat password"
-                                required>
-
+                            <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                            <input type="password" name="password" class="form-control" 
+                                   placeholder="Buat password" required>
                         </div>
-
                     </div>
 
                     <div class="mb-4">
-
-                        <label class="form-label">
-                            Foto Profil
-                        </label>
-
+                        <label class="form-label">Foto Profil</label>
                         <div class="input-group">
-
-                            <span class="input-group-text">
-                                <i class="fa-solid fa-image"></i>
-                            </span>
-
-                            <input
-                                type="file"
-                                name="foto"
-                                class="form-control"
-                                accept="image/*"
-                                required>
-
+                            <span class="input-group-text"><i class="fa-solid fa-image"></i></span>
+                            <input type="file" name="foto" class="form-control" 
+                                   accept="image/*" required>
                         </div>
-
                         <div class="form-text small mt-2">
-
                             Gunakan foto terbaikmu untuk profil akun 🌸
-
                         </div>
-
                     </div>
 
-                    <button
-                        type="submit"
-                        name="register"
-                        class="btn btn-register w-100 mb-4">
-
-                        <i class="fa-solid fa-user-plus me-2"></i>
-
-                        Daftar Sekarang
-
+                    <button type="submit" name="register" class="btn btn-register w-100 mb-4">
+                        <i class="fa-solid fa-user-plus me-2"></i> Daftar Sekarang
                     </button>
 
                 </form>
 
                 <div class="text-center">
-
                     <p class="small text-muted mb-0">
-
-                        Sudah punya akun?
-
-                        <a href="login.php"
-                           class="login-link">
-
-                            Login di sini
-
-                        </a>
-
+                        Sudah punya akun? <a href="login.php" class="login-link">Login disini</a>
                     </p>
-
                 </div>
-
             </div>
 
         </div>
-
     </div>
-
 </div>
 
 <?php include 'layout/footer.php'; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
 </body>
 </html>

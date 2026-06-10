@@ -46,7 +46,6 @@ id_produk INT AUTO_INCREMENT PRIMARY KEY,
 id_kategori INT NOT NULL,
 id_supplier INT NOT NULL,
 
-```
 nama_produk VARCHAR(100) NOT NULL,
 warna VARCHAR(50),
 ukuran VARCHAR(30),
@@ -67,8 +66,6 @@ FOREIGN KEY (id_kategori)
 
 FOREIGN KEY (id_supplier)
     REFERENCES supplier(id_supplier)
-```
-
 );
 
 -- =========================================
@@ -89,7 +86,6 @@ CREATE TABLE pesanan (
 id_pesanan INT AUTO_INCREMENT PRIMARY KEY,
 id_pelanggan INT NOT NULL,
 
-```
 tanggal DATETIME DEFAULT CURRENT_TIMESTAMP,
 
 total INT DEFAULT 0,
@@ -106,8 +102,6 @@ bukti VARCHAR(255),
 
 FOREIGN KEY (id_pelanggan)
     REFERENCES pelanggan(id_pelanggan)
-```
-
 );
 
 -- =========================================
@@ -118,7 +112,6 @@ id_detail INT AUTO_INCREMENT PRIMARY KEY,
 id_pesanan INT NOT NULL,
 id_produk INT NOT NULL,
 
-```
 jumlah INT NOT NULL,
 harga INT NOT NULL,
 subtotal INT NOT NULL,
@@ -128,8 +121,6 @@ FOREIGN KEY (id_pesanan)
 
 FOREIGN KEY (id_produk)
     REFERENCES produk(id_produk)
-```
-
 );
 
 -- =========================================
@@ -139,14 +130,14 @@ CREATE TABLE bouquet_custom (
 id_bouquet INT AUTO_INCREMENT PRIMARY KEY,
 id_pesanan INT NOT NULL,
 
-```
+
 nama_bouquet VARCHAR(100),
 catatan TEXT,
 ongkos_rakit INT DEFAULT 0,
 
 FOREIGN KEY (id_pesanan)
     REFERENCES pesanan(id_pesanan)
-```
+
 
 );
 
@@ -158,7 +149,6 @@ id_detail_bouquet INT AUTO_INCREMENT PRIMARY KEY,
 id_bouquet INT NOT NULL,
 id_produk INT NOT NULL,
 
-```
 jumlah INT NOT NULL,
 
 FOREIGN KEY (id_bouquet)
@@ -166,7 +156,6 @@ FOREIGN KEY (id_bouquet)
 
 FOREIGN KEY (id_produk)
     REFERENCES produk(id_produk)
-```
 
 );
 
@@ -177,14 +166,12 @@ CREATE TABLE pembelian (
 id_pembelian INT AUTO_INCREMENT PRIMARY KEY,
 id_supplier INT NOT NULL,
 
-```
 tanggal DATETIME DEFAULT CURRENT_TIMESTAMP,
 
 total_beli INT DEFAULT 0,
 
 FOREIGN KEY (id_supplier)
     REFERENCES supplier(id_supplier)
-```
 
 );
 
@@ -196,7 +183,6 @@ id_detail_beli INT AUTO_INCREMENT PRIMARY KEY,
 id_pembelian INT NOT NULL,
 id_produk INT NOT NULL,
 
-```
 jumlah INT NOT NULL,
 harga_beli INT NOT NULL,
 subtotal INT NOT NULL,
@@ -206,7 +192,6 @@ FOREIGN KEY (id_pembelian)
 
 FOREIGN KEY (id_produk)
     REFERENCES produk(id_produk)
-```
 
 );
 
@@ -217,14 +202,12 @@ CREATE TABLE barang_rusak (
 id_rusak INT AUTO_INCREMENT PRIMARY KEY,
 id_produk INT NOT NULL,
 
-```
 tanggal DATE,
 jumlah INT,
 keterangan VARCHAR(100),
 
 FOREIGN KEY (id_produk)
     REFERENCES produk(id_produk)
-```
 
 );
 
@@ -234,7 +217,6 @@ FOREIGN KEY (id_produk)
 CREATE TABLE retur_supplier (
 id_retur INT AUTO_INCREMENT PRIMARY KEY,
 
-```
 id_supplier INT NOT NULL,
 id_produk INT NOT NULL,
 
@@ -247,7 +229,6 @@ FOREIGN KEY (id_supplier)
 
 FOREIGN KEY (id_produk)
     REFERENCES produk(id_produk)
-```
 
 );
 

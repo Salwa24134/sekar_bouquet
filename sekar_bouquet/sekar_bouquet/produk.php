@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 include 'koneksi.php';
 
 // WAJIB LOGIN
@@ -13,22 +15,14 @@ if (!isset($_SESSION['username'])) {
 <html lang="id">
 
 <head>
-
     <meta charset="UTF-8">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Katalog Bouquet - Sekar Bouquet</title>
 
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-
-    <link rel="stylesheet"
-          href="assets/css/style.css">
-
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Playfair+Display:wght@700&display=swap"
-          rel="stylesheet">
-
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
     <style>
         body {
@@ -121,14 +115,12 @@ if (!isset($_SESSION['username'])) {
             font-weight: 600;
         }
     </style>
-
 </head>
 
 <body>
 
 <?php include 'layout/header.php'; ?>
 
-<!-- BANNER -->
 <div class="promo-banner text-center shadow">
     <div class="container">
         <h1 class="promo-title text-uppercase mb-3">
@@ -140,7 +132,6 @@ if (!isset($_SESSION['username'])) {
     </div>
 </div>
 
-<!-- PRODUK -->
 <div class="container mb-5 flex-grow-1">
 
     <form method="post" action="checkout.php">
@@ -149,29 +140,29 @@ if (!isset($_SESSION['username'])) {
 
             <?php
             $sql = "SELECT * FROM produk";
-            $result = sqlsrv_query($koneksi, $sql);
+            $result = $koneksi->query($sql);
 
             if ($result === false) {
-                die(print_r(sqlsrv_errors(), true));
+                die("Error Query: " . $koneksi->error);
             }
 
-            if (sqlsrv_has_rows($result)) {
-
-                while ($row = sqlsrv_fetch_array($result, SQLSRV_FETCH_ASSOC)) {
+            // Pengecekan jumlah ketersediaan baris data di MySQLi
+            if ($result->num_rows > 0) {
+                // Iterasi mengambil array data
+                while ($row = $result->fetch_assoc()) {
             ?>
 
                 <div class="col-lg-4 col-md-6 col-sm-12">
-
                     <div class="card product-card h-100 shadow-sm">
 
-                        <img src="assets/gambar/<?php echo $row['gambar']; ?>"
+                        <img src="assets/gambar/<?php echo htmlspecialchars($row['gambar']); ?>"
                              class="card-img-top product-image"
-                             alt="<?php echo $row['nama']; ?>">
+                             alt="<?php echo htmlspecialchars($row['nama']); ?>">
 
                         <div class="card-body d-flex flex-column text-center">
 
                             <h5 class="product-name mb-2">
-                                <?php echo $row['nama']; ?>
+                                <?php echo htmlspecialchars($row['nama']); ?>
                             </h5>
 
                             <p class="product-price mb-4">
@@ -181,28 +172,22 @@ if (!isset($_SESSION['username'])) {
                             <div class="mt-auto">
 
                                 <div class="d-flex justify-content-center align-items-center mb-3 py-3 border rounded-4 bg-light shadow-sm">
-
                                     <input class="form-check-input custom-check me-2"
                                            type="checkbox"
                                            name="produk_id[]"
-                                           value="<?php echo $row['id']; ?>">
-
+                                           value="<?php echo htmlspecialchars($row['id']); ?>">
                                     <label class="fw-bold">
                                         Pilih Bouquet
                                     </label>
-
                                 </div>
 
                                 <div class="d-flex justify-content-center align-items-center gap-3">
-
                                     <span class="fw-semibold text-muted">Jumlah</span>
-
                                     <input type="number"
-                                           name="jumlah[<?php echo $row['id']; ?>]"
+                                           name="jumlah[<?php echo htmlspecialchars($row['id']); ?>]"
                                            class="form-control qty-input"
                                            min="1"
                                            value="1">
-
                                 </div>
 
                             </div>
@@ -210,25 +195,22 @@ if (!isset($_SESSION['username'])) {
                         </div>
 
                     </div>
-
                 </div>
 
             <?php
                 }
             } else {
-                echo "<div class='text-center text-muted'>Belum ada produk</div>";
+                echo "<div class='text-center text-muted py-5'><h5>Belum ada produk tersedia di katalog</h5></div>";
             }
             ?>
 
         </div>
 
         <div class="text-center mt-5">
-
             <button type="submit" class="btn btn-main btn-lg px-5 shadow">
                 <i class="fa-solid fa-bag-shopping me-2"></i>
                 Lanjut ke Checkout
             </button>
-
         </div>
 
     </form>

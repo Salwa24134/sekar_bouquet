@@ -2,23 +2,18 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+// Menyertakan koneksi MySQLi jika nanti Anda ingin menghitung jumlah keranjang/notifikasi dari DB
+include 'koneksi.php'; 
 ?>
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Sekar Bouquet</title>
 
-    <!-- BOOTSTRAP -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- FONT -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-
-    <!-- ICON -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
     <style>
@@ -58,122 +53,105 @@ if (session_status() === PHP_SESSION_NONE) {
 
     <div class="container">
 
-        <!-- LOGO -->
         <a class="navbar-brand fw-bold d-flex align-items-center"
            href="index.php"
            style="font-family: 'Playfair Display', serif;">
-
             <img src="assets/gambar/logo.jpeg"
                  class="rounded-circle me-2 border border-2 border-light"
-                 style="width:45px;height:45px;object-fit:cover;">
-
+                 style="width:45px;height:45px;object-fit:cover;"
+                 alt="Logo Sekar">
             Sekar Bouquet
         </a>
 
-        <!-- TOGGLER -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <!-- MENU -->
         <div class="collapse navbar-collapse" id="nav">
 
             <ul class="navbar-nav mx-auto">
-
                 <li class="nav-item">
                     <a class="nav-link text-white" href="index.php">
                         <i class="fa fa-house me-1"></i> Beranda
                     </a>
                 </li>
-
                 <li class="nav-item">
                     <a class="nav-link text-white" href="produk.php">
                         <i class="fa fa-seedling me-1"></i> Bouquet
                     </a>
                 </li>
-
                 <li class="nav-item">
                     <a class="nav-link text-white" href="tentang.php">
                         <i class="fa fa-heart me-1"></i> Tentang
                     </a>
                 </li>
-
             </ul>
 
             <ul class="navbar-nav ms-auto align-items-center">
 
-                <!-- =========================
-                     CEK LOGIN USER
-                ========================== -->
                 <?php if (isset($_SESSION['user']['username'])): ?>
 
                     <?php $user = $_SESSION['user']; ?>
 
-                    <!-- ADMIN BUTTON -->
-                    <?php if ($user['role'] === 'admin'): ?>
+                    <?php if (isset($user['role']) && $user['role'] === 'admin'): ?>
                         <a href="admin.php"
-                           class="btn btn-warning rounded-pill me-3 fw-bold">
+                           class="btn btn-warning rounded-pill me-3 fw-bold shadow-sm">
                             <i class="fa fa-gear me-1"></i> Admin
                         </a>
                     <?php endif; ?>
 
-                    <!-- DROPDOWN USER -->
                     <li class="nav-item dropdown">
-
                         <a class="nav-link dropdown-toggle text-white d-flex align-items-center"
                            href="#"
-                           data-bs-toggle="dropdown">
+                           id="userDropdown"
+                           role="button"
+                           data-bs-toggle="dropdown"
+                           aria-expanded="false">
 
                             <?php
                             $foto = $user['foto'] ?? '';
-                            $fotoPath = (!empty($foto) && file_exists("assets/foto/".$foto))
-                                ? "assets/foto/".$foto
-                                : "assets/foto/default.png";
+                            // Normalisasi direktori folder foto (diubah ke assets/gambar agar selaras dengan modul users_admin)
+                            $fotoPath = (!empty($foto) && file_exists("assets/gambar/".$foto))
+                                ? "assets/gambar/".$foto
+                                : "assets/gambar/default.png";
                             ?>
 
                             <img src="<?php echo $fotoPath; ?>"
                                  class="rounded-circle me-2 border border-2 border-light"
-                                 style="width:38px;height:38px;object-fit:cover;">
+                                 style="width:38px;height:38px;object-fit:cover;"
+                                 alt="User Avatar">
 
                             Hai, <?php echo htmlspecialchars($user['username']); ?> 🌸
                         </a>
 
-                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-3">
-
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-3" aria-labelledby="userDropdown">
                             <li>
                                 <a class="dropdown-item py-2" href="profil_user.php">
                                     <i class="fa fa-user me-2"></i> Profil
                                 </a>
-                            </li>
-
+                            </</li>
                             <li>
                                 <a class="dropdown-item py-2" href="riwayat_pesanan.php">
                                     <i class="fa fa-bag-shopping me-2"></i> Riwayat Pesanan
                                 </a>
                             </li>
-
                             <li><hr class="dropdown-divider"></li>
-
                             <li>
                                 <a class="dropdown-item py-2 text-danger fw-bold" href="logout.php">
                                     <i class="fa fa-right-from-bracket me-2"></i> Logout
                                 </a>
                             </li>
-
                         </ul>
                     </li>
 
                 <?php else: ?>
 
-                    <!-- LOGIN -->
                     <a href="login.php"
-                       class="btn btn-outline-light rounded-pill me-2">
+                       class="btn btn-outline-light rounded-pill me-2 px-3">
                         Login
                     </a>
-
-                    <!-- REGISTER -->
                     <a href="register.php"
-                       class="btn btn-light rounded-pill fw-bold"
+                       class="btn btn-light rounded-pill fw-bold px-3"
                        style="color:#b76e79;">
                         Register
                     </a>
@@ -186,7 +164,6 @@ if (session_status() === PHP_SESSION_NONE) {
     </div>
 </nav>
 
-<!-- BOOTSTRAP JS (WAJIB BIAR DROPDOWN HIDUP) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>

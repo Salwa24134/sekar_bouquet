@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 include 'koneksi.php';
 
 if (!isset($_SESSION['username'])) {
@@ -15,21 +17,26 @@ if (empty($_POST['produk_id'])) {
 $produkDipilih = $_POST['produk_id'];
 $jumlahDipilih = $_POST['jumlah'] ?? [];
 
-$nama = $_POST['nama'];
-$email = $_POST['email'];
-$pembayaran = $_POST['pembayaran'];
+// Memastikan variabel POST tersedia untuk menghindari error "undefined array key"
+$nama       = $_POST['nama'] ?? '';
+$email      = $_POST['email'] ?? '';
+$pembayaran = $_POST['pembayaran'] ?? '';
 
-$total = 0;
+$total      = 0;
 $detailData = [];
 
 /* =========================
-   1. VALIDASI + HITUNG
+   1. VALIDASI + HITUNG (MySQLi)
 ========================= */
 foreach ($produkDipilih as $id) {
+    $id = (int)$id;
 
-    $sql = "SELECT id, nama, harga, stok FROM produk WHERE id = ?";
-    $res = sqlsrv_query($koneksi, $sql, [$id]);
-    $produk = sqlsrv_fetch_array($res, SQLSRV_FETCH_ASSOC);
+    $stmt = $koneksi->prepare("SELECT id, nama, harga, stok FROM produk WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $produk = $result->fetch_assoc();
+    $stmt->close();
 
     if (!$produk) continue;
 
@@ -38,7 +45,7 @@ foreach ($produkDipilih as $id) {
 
     if ($qty > $produk['stok']) {
         echo "<script>
-            alert('Stok {$produk['nama']} tidak cukup (sisa: {$produk['stok']})');
+            alert('Stok " . addslashes($produk['nama']) . " tidak cukup (sisa: {$produk['stok']})');
             window.location='produk.php';
         </script>";
         exit();
@@ -48,10 +55,10 @@ foreach ($produkDipilih as $id) {
     $total += $subtotal;
 
     $detailData[] = [
-        'id' => $produk['id'],
-        'nama' => $produk['nama'],
-        'harga' => $produk['harga'],
-        'qty' => $qty,
+        'id'       => $produk['id'],
+        'nama'     => $produk['nama'],
+        'harga'    => $produk['harga'],
+        'qty'      => $qty,
         'subtotal' => $subtotal
     ];
 }
@@ -60,7 +67,6 @@ foreach ($produkDipilih as $id) {
    2. UPLOAD BUKTI
 ========================= */
 $buktiName = "";
-
 $file = $_FILES['bukti_transfer'] ?? null;
 
 if (!$file || $file['error'] != 0) {
@@ -68,7 +74,6 @@ if (!$file || $file['error'] != 0) {
 }
 
 if ($file && $file['error'] == 0) {
-
     $folder = "assets/gambar/";
     if (!is_dir($folder)) mkdir($folder, 0777, true);
 
@@ -79,45 +84,41 @@ if ($file && $file['error'] == 0) {
 }
 
 /* =========================
-   3. INSERT HEADER (AMBIL ID AMAN)
+   3. INSERT HEADER (Menggunakan insert_id MySQLi)
 ========================= */
+// GETDATE() di SQL Server diganti menjadi NOW() di MySQL
 $sqlInsert = "
-INSERT INTO pesanan_header (nama, email, pembayaran, tanggal, total, status, bukti)
-VALUES (?, ?, ?, GETDATE(), ?, 'Menunggu Verifikasi', ?)
+    INSERT INTO pesanan_header (nama, email, pembayaran, tanggal, total, status, bukti)
+    VALUES (?, ?, ?, NOW(), ?, 'Menunggu Verifikasi', ?)
 ";
 
-$paramsInsert = [$nama, $email, $pembayaran, $total, $buktiName];
+$stmtHeader = $koneksi->prepare($sqlInsert);
+$stmtHeader->bind_param("sssis", $nama, $email, $pembayaran, $total, $buktiName);
+$stmtHeader->execute();
 
-sqlsrv_query($koneksi, $sqlInsert, $paramsInsert);
-
-/* AMBIL ID YANG BARU DI-INSERT (AMAN) */
-$sqlId = "SELECT @@IDENTITY AS id";
-$resId = sqlsrv_query($koneksi, $sqlId);
-$rowId = sqlsrv_fetch_array($resId, SQLSRV_FETCH_ASSOC);
-
-$id_pesanan = $rowId['id'];
+// Cara mutakhir & aman mengambil ID Auto-Increment terakhir di MySQLi
+$id_pesanan = $koneksi->insert_id; 
+$stmtHeader->close();
 
 /* =========================
-   4. INSERT DETAIL + UPDATE STOK
+   4. INSERT DETAIL + UPDATE STOK (MySQLi)
 ========================= */
-foreach ($detailData as $p) {
+if ($id_pesanan > 0) {
+    foreach ($detailData as $p) {
+        // Insert ke pesanan_detail
+        $stmtDetail = $koneksi->prepare("INSERT INTO pesanan_detail (id_pesanan, produk_id, jumlah, harga, subtotal) VALUES (?, ?, ?, ?, ?)");
+        $stmtDetail->bind_param("iiiii", $id_pesanan, $p['id'], $p['qty'], $p['harga'], $p['subtotal']);
+        $stmtDetail->execute();
+        $stmtDetail->close();
 
-    sqlsrv_query($koneksi,
-        "INSERT INTO pesanan_detail (id_pesanan, produk_id, jumlah, harga, subtotal)
-         VALUES (?, ?, ?, ?, ?)",
-        [
-            $id_pesanan,
-            $p['id'],
-            $p['qty'],
-            $p['harga'],
-            $p['subtotal']
-        ]
-    );
-
-    sqlsrv_query($koneksi,
-        "UPDATE produk SET stok = stok - ? WHERE id = ?",
-        [$p['qty'], $p['id']]
-    );
+        // Potong stok produk
+        $stmtStok = $koneksi->prepare("UPDATE produk SET stok = stok - ? WHERE id = ?");
+        $stmtStok->bind_param("ii", $p['qty'], $p['id']);
+        $stmtStok->execute();
+        $stmtStok->close();
+    }
+} else {
+    die("Gagal memproses pembuatan ID Transaksi Header.");
 }
 ?>
 
@@ -126,8 +127,8 @@ foreach ($detailData as $p) {
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pesanan Berhasil - Sekar Bouquet</title>
-
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
 </head>
 
@@ -138,14 +139,10 @@ foreach ($detailData as $p) {
 <div class="container text-center py-5">
 
     <h1 class="text-success">Pesanan Berhasil 🎉</h1>
+    <p>Terima kasih, <?php echo htmlspecialchars($nama); ?>. Pesanan kamu sudah masuk.</p>
 
-    <p>Terima kasih, <?php echo $nama; ?>. Pesanan kamu sudah masuk.</p>
-
-    <a href="cetak_pdf.php?id=<?php echo $id_pesanan; ?>"
-       class="btn btn-primary mt-3">
-
+    <a href="cetak_pdf.php?id=<?php echo (int)$id_pesanan; ?>" class="btn btn-primary mt-3">
         Download Nota
-
     </a>
 
     <br><br>
