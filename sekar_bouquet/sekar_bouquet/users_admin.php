@@ -81,13 +81,17 @@ $resultData = $koneksi->query($sql);
             color: white;
         }
 
+        .sidebar h3 {
+            color: white;
+        }
+
         .sidebar a {
             display: block;
             color: white;
             padding: 10px;
             text-decoration: none;
-            border-radius: 10px;
             margin-bottom: 10px;
+            border-radius: 10px;
         }
 
         .sidebar a:hover {
@@ -139,14 +143,7 @@ $resultData = $koneksi->query($sql);
 
 <body>
 
-<div class="sidebar">
-    <h3 class="mb-4">🌸 Sekar Admin</h3>
-    <a href="admin.php">Dashboard</a>
-    <a href="produk_admin.php">Produk</a>
-    <a href="pesanan_admin.php">Pesanan</a>
-    <a href="users_admin.php">User</a>
-    <a href="logout.php">Logout</a>
-</div>
+<?php include 'sidebar.php'; ?>
 
 <div class="main">
 

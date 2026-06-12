@@ -27,17 +27,15 @@ $daftarProduk = [];
 $total = 0;
 
 // =====================================================
-// AMBIL DATA SEKALIGUS + VALIDASI STOK + HITUNG TOTAL (MySQLi)
+// REVISI: MENYESUAIKAN NAMA KOLOM DENGAN DATABASE KAMU
 // =====================================================
-// Siapkan statement di luar loop agar lebih cepat & aman
-$stmt = $koneksi->prepare("SELECT id, nama, harga, stok FROM produk WHERE id = ?");
+// id -> id_produk | nama -> nama_produk | harga -> harga_jual
+$stmt = $koneksi->prepare("SELECT id_produk, nama_produk, harga_jual, stok FROM produk WHERE id_produk = ?");
 
 foreach ($produkDipilih as $id) {
-    // Bind parameter (i = integer)
     $stmt->bind_param("i", $id);
     $stmt->execute();
     
-    // Ambil hasil query MySQLi
     $result = $stmt->get_result();
     $produk = $result->fetch_assoc();
 
@@ -49,18 +47,19 @@ foreach ($produkDipilih as $id) {
         // CEK STOK
         if ($qty > $produk['stok']) {
             echo "<script>
-                alert('Stok " . addslashes($produk['nama']) . " tidak cukup! Sisa: {$produk['stok']}');
+                alert('Stok " . addslashes($produk['nama_produk']) . " tidak cukup! Sisa: {$produk['stok']}');
                 window.location='produk.php';
             </script>";
             exit();
         }
 
-        $subtotal = $produk['harga'] * $qty;
+        $subtotal = $produk['harga_jual'] * $qty;
 
+        // Menyimpan data ke array dengan *key* yang tetap sama agar tidak merusak kode HTML di bawahnya
         $daftarProduk[] = [
-            'id' => $produk['id'],
-            'nama' => $produk['nama'],
-            'harga' => $produk['harga'],
+            'id' => $produk['id_produk'],
+            'nama' => $produk['nama_produk'],
+            'harga' => $produk['harga_jual'],
             'jumlah' => $qty,
             'subtotal' => $subtotal
         ];
@@ -68,9 +67,8 @@ foreach ($produkDipilih as $id) {
         $total += $subtotal;
     }
 }
-$stmt->close(); // Tutup statement setelah selesai loop
+$stmt->close();
 
-// kalau semua produk gagal terbaca
 if (empty($daftarProduk)) {
     echo "<script>
         alert('Produk tidak valid!');
@@ -101,7 +99,7 @@ if (empty($daftarProduk)) {
 
         h1, h4, h5 {
             font-family: 'Playfair Display', serif;
-            color: #b76e79;
+            color: #8d4f5c; /* REVISI: Disamakan dengan warna utama */
             font-weight: 700;
         }
 
@@ -157,6 +155,7 @@ if (empty($daftarProduk)) {
             cursor: pointer;
             transition: 0.3s;
             font-weight: 600;
+            color: #8d4f5c;
         }
 
         .bank-option.active {
@@ -179,24 +178,24 @@ if (empty($daftarProduk)) {
 
 <div class="container my-5 flex-grow-1">
 
-    <h1 class="text-center mb-5">Checkout Bouquet 🌸</h1>
+    <h1 class="text-center mb-5 text-uppercase">Checkout Bouquet 🌸</h1>
 
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card checkout-card p-4 p-md-5">
 
                 <h4 class="mb-4 border-bottom pb-3">
-                    <i class="fa-solid fa-receipt me-2"></i> Ringkasan Pesanan
+                    <i class="fa-solid fa-receipt me-2"></i> Ringkasan Komponen & Produk
                 </h4>
 
                 <ul class="list-group mb-4">
                     <?php foreach ($daftarProduk as $p) { ?>
                         <li class="list-group-item d-flex justify-content-between align-items-center border-0 border-bottom py-3">
                             <div>
-                                <h6 class="fw-bold mb-1"><?php echo htmlspecialchars($p['nama']); ?></h6>
+                                <h6 class="fw-bold mb-1 text-dark"><?php echo htmlspecialchars($p['nama']); ?></h6>
                                 <small class="text-muted">Jumlah: <?php echo $p['jumlah']; ?>x</small>
                             </div>
-                            <span class="fw-bold text-danger">
+                            <span class="fw-bold" style="color: #b76e79;">
                                 Rp <?php echo number_format($p['subtotal'], 0, ',', '.'); ?>
                             </span>
                         </li>
@@ -204,7 +203,7 @@ if (empty($daftarProduk)) {
 
                     <li class="list-group-item d-flex justify-content-between align-items-center border-0 pt-4">
                         <h5 class="mb-0">Total Pembayaran</h5>
-                        <h4 class="mb-0 :fw-bold text-danger">
+                        <h4 class="mb-0 fw-bold" style="color: #8d4f5c;">
                             Rp <?php echo number_format($total, 0, ',', '.'); ?>
                         </h4>
                     </li>
@@ -212,10 +211,10 @@ if (empty($daftarProduk)) {
 
                 <div class="alert border-0 shadow-sm mb-4" style="background: #fff0f3; border-radius: 18px;">
                     <div class="d-flex align-items-center">
-                        <i class="fa-solid fa-location-dot fs-3 me-3 text-danger"></i>
+                        <i class="fa-solid fa-location-dot fs-3 me-3" style="color: #b76e79;"></i>
                         <div>
-                            <h6 class="fw-bold mb-1">Lokasi Sekar Bouquet</h6>
-                            <p class="mb-0 small">Surabaya, Jawa Timur 🌸</p>
+                            <h6 class="fw-bold mb-1">Lokasi Workshop Utama</h6>
+                            <p class="mb-0 small text-muted">Jombang, Jawa Timur 🌸</p> 
                         </div>
                     </div>
                 </div>
@@ -236,7 +235,7 @@ if (empty($daftarProduk)) {
                         </div>
                         <div class="col-md-6 mb-4">
                             <label class="form-label">Email Konfirmasi</label>
-                            <input type="type" name="email" class="form-control" placeholder="email@gmail.com" required>
+                            <input type="email" name="email" class="form-control" placeholder="email@gmail.com" required>
                         </div>
                     </div>
 
@@ -250,7 +249,7 @@ if (empty($daftarProduk)) {
                     </div>
 
                     <div id="bank_section" style="display:none;" class="mb-4 text-center">
-                        <label class="form-label d-block text-start">Pilih Bank</label>
+                        <label class="form-label d-block text-start">Pilih Bank Tujuan</label>
                         <div class="row g-2">
                             <div class="col-4">
                                 <div id="bank_bca" class="card p-3 bank-option" onclick="pilihBank('BCA')">BCA</div>
@@ -265,15 +264,15 @@ if (empty($daftarProduk)) {
                         <input type="hidden" name="bank_nama" id="bank_nama_input">
                     </div>
 
-                    <div id="detail_rekening" style="display:none;" class="box-pembayaran border border-info mb-4 shadow-sm text-start">
-                        <h5 id="nama_bank" class="text-info mb-1"></h5>
-                        <h4 id="no_rek" class="fw-bold mb-3"></h4>
+                    <div id="detail_rekening" style="display:none;" class="box-pembayaran border mb-4 shadow-sm text-start" style="border-color: #f1c9d2;">
+                        <h5 id="nama_bank" class="mb-1" style="color: #8d4f5c;"></h5>
+                        <h4 id="no_rek" class="fw-bold mb-3" style="color: #b76e79;"></h4>
                         <label class="form-label small">Upload Bukti Transfer</label>
                         <input type="file" name="bukti_transfer" id="bukti_transfer" class="form-control" accept="image/*">
                     </div>
 
-                    <div id="ewallet_section" style="display:none;" class="box-pembayaran border border-success mb-4 shadow-sm text-center">
-                        <h5 class="text-success fw-bold mb-3">Scan QRIS Sekar Bouquet</h5>
+                    <div id="ewallet_section" style="display:none;" class="box-pembayaran border mb-4 shadow-sm text-center" style="border-color: #f1c9d2;">
+                        <h5 class="fw-bold mb-3" style="color: #8d4f5c;">Scan QRIS Sekar Bouquet</h5>
                         <img src="assets/gambar/qris.png" width="180" class="img-fluid mb-3 border rounded" alt="QRIS Code">
                         <label class="form-label d-block text-start small">Upload Bukti QRIS</label>
                         <input type="file" name="bukti_qris" id="bukti_qris" class="form-control" accept="image/*">
@@ -284,7 +283,7 @@ if (empty($daftarProduk)) {
                     </button>
 
                     <a href="produk.php" class="btn btn-back w-100 btn-lg mt-3">
-                        <i class="fa-solid fa-arrow-left me-2"></i> Kembali Pilih Bouquet
+                        <i class="fa-solid fa-arrow-left me-2"></i> Kembali Pilih Komponen
                     </a>
 
                 </form>

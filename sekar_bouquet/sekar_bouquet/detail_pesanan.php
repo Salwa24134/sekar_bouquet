@@ -20,10 +20,10 @@ if (!isset($_GET['id'])) {
 
 $id = (int)$_GET['id']; // Casting ke int untuk keamanan tambahan
 
-/* =========================
-   DATA HEADER PESANAN (MySQLi)
-========================= */
-$stmtHeader = $koneksi->prepare("SELECT * FROM pesanan_header WHERE id = ?");
+/* =====================================================
+   DATA HEADER PESANAN (REVISI: Mengubah id menjadi id_pesanan)
+===================================================== */
+$stmtHeader = $koneksi->prepare("SELECT * FROM pesanan_header WHERE id_pesanan = ?");
 $stmtHeader->bind_param("i", $id);
 $stmtHeader->execute();
 $resHeader = $stmtHeader->get_result();
@@ -35,13 +35,13 @@ if (!$header) {
 }
 $stmtHeader->close();
 
-/* =========================
-   DATA DETAIL PESANAN (MySQLi)
-========================= */
+/* =====================================================
+   DATA DETAIL PESANAN (REVISI: Sesuai p.id_produk & p.nama_produk)
+===================================================== */
 $sqlDetail = "
-    SELECT d.*, p.nama
+    SELECT d.*, p.nama_produk 
     FROM pesanan_detail d
-    JOIN produk p ON d.produk_id = p.id
+    JOIN produk p ON d.produk_id = p.id_produk
     WHERE d.id_pesanan = ?
 ";
 
@@ -66,12 +66,12 @@ $resDetail = $stmtDetail->get_result();
     <style>
         body {
             font-family: 'Poppins', sans-serif;
-            background: #fff4f7;
+            background: #fff8f9; /* REVISI: Diselaraskan dengan tema warna utama pink lembut */
         }
 
-        h2, h4 {
+        h2, h4, h5 {
             font-family: 'Playfair Display', serif;
-            color: #b76e79;
+            color: #8d4f5c; /* REVISI: Menggunakan warna plum tua agar serasi */
         }
 
         /* SIDEBAR */
@@ -106,19 +106,22 @@ $resDetail = $stmtDetail->get_result();
         .card-box {
             border: none;
             border-radius: 18px;
-            box-shadow: 0 10px 25px rgba(183,110,121,0.15);
+            box-shadow: 0 10px 25px rgba(183,110,121,0.1);
+            background: white;
         }
 
         .badge-status {
             background: #b76e79;
             color: white;
+            padding: 6px 12px;
+            border-radius: 8px;
         }
 
         .info-box {
             background: #fff;
             border-radius: 16px;
             padding: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            box-shadow: 0 10px 25px rgba(183,110,121,0.06);
         }
 
         .btn-main {
@@ -136,7 +139,7 @@ $resDetail = $stmtDetail->get_result();
 <body>
 
 <div class="sidebar">
-    <h3 class="mb-4">🌸 Sekar Admin</h3>
+    <h3 class="mb-4 text-white fw-bold">🌸 Sekar Admin</h3>
     <a href="admin.php">Dashboard</a>
     <a href="produk_admin.php">Produk</a>
     <a href="pesanan_admin.php">Pesanan</a>
@@ -146,34 +149,34 @@ $resDetail = $stmtDetail->get_result();
 
 <div class="main">
 
-    <h2 class="mb-4">Detail Pesanan 📦</h2>
+    <h2 class="mb-4 fw-bold text-uppercase">Detail Pesanan 📦</h2>
 
-    <a href="pesanan_admin.php" class="btn btn-secondary mb-3">
-        ← Kembali
+    <a href="pesanan_admin.php" class="btn btn-secondary mb-3 rounded-pill px-3">
+        <i class="fa-solid fa-arrow-left me-2"></i>Kembali
     </a>
 
     <div class="row g-4">
 
         <div class="col-md-4">
             <div class="info-box">
-                <h5 class="mb-3">Informasi Pesanan</h5>
+                <h5 class="mb-3 fw-bold">Informasi Pesanan</h5>
 
-                <p><b>ID:</b> #<?= htmlspecialchars($header['id']) ?></p>
-                <p><b>Nama:</b> <?= htmlspecialchars($header['nama']) ?></p>
+                <p><b>ID:</b> #<?= htmlspecialchars($header['id_pesanan']) ?></p>
+                <p><b>Nama Pemesan:</b> <?= htmlspecialchars($header['nama']) ?></p>
                 <p><b>Email:</b> <?= htmlspecialchars($header['email']) ?></p>
                 <p><b>Pembayaran:</b> <?= htmlspecialchars($header['pembayaran']) ?></p>
                 
-                <p><b>Tanggal:</b> <?= date('Y-m-d H:i', strtotime($header['tanggal'])) ?></p>
+                <p><b>Tanggal:</b> <?= date('d-m-Y H:i', strtotime($header['tanggal'])) ?></p>
 
-                <p>
+                <p class="mb-3">
                     <b>Status:</b>
                     <span class="badge badge-status">
                         <?= htmlspecialchars($header['status']) ?>
                     </span>
                 </p>
 
-                <p><b>Total:</b>
-                    <span class="fw-bold text-danger">
+                <p class="border-top pt-3 mb-0"><b>Total Tagihan:</b>
+                    <span class="fw-bold fs-5" style="color: #8d4f5c;">
                         Rp <?= number_format($header['total'], 0, ',', '.') ?>
                     </span>
                 </p>
@@ -182,24 +185,24 @@ $resDetail = $stmtDetail->get_result();
 
         <div class="col-md-8">
             <div class="card card-box p-4">
-                <h5 class="mb-3">Produk Dipesan</h5>
+                <h5 class="mb-3 fw-bold">Komponen & Produk Dipesan</h5>
 
-                <table class="table table-hover">
+                <table class="table table-hover align-middle">
                     <thead>
-                        <tr>
-                            <th>Produk</th>
-                            <th>Harga</th>
-                            <th>Qty</th>
-                            <th>Subtotal</th>
+                        <tr class="text-secondary">
+                            <th>Komponen</th>
+                            <th>Harga Satuan</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-end">Subtotal</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php while ($row = $resDetail->fetch_assoc()) { ?>
                         <tr>
-                            <td><?= htmlspecialchars($row['nama']) ?></td>
+                            <td class="fw-bold text-dark"><?= htmlspecialchars($row['nama_produk']) ?></td>
                             <td>Rp <?= number_format($row['harga'], 0, ',', '.') ?></td>
-                            <td><?= htmlspecialchars($row['jumlah']) ?></td>
-                            <td class="text-danger fw-bold">
+                            <td class="text-center"><?= htmlspecialchars($row['jumlah']) ?>x</td>
+                            <td class="text-end fw-bold" style="color: #b76e79;">
                                 Rp <?= number_format($row['subtotal'], 0, ',', '.') ?>
                             </td>
                         </tr>
@@ -212,14 +215,16 @@ $resDetail = $stmtDetail->get_result();
     </div>
 
     <div class="card card-box p-4 mt-4">
-        <h5>Bukti Pembayaran</h5>
+        <h5 class="fw-bold mb-3">Lampiran Bukti Pembayaran</h5>
         <?php if (!empty($header['bukti'])) { ?>
-            <img src="assets/gambar/<?= htmlspecialchars($header['bukti']) ?>"
-                 class="img-fluid rounded"
-                 style="max-width:300px;" 
-                 alt="Bukti Pembayaran">
+            <div class="border d-inline-block p-2 rounded bg-light shadow-sm">
+                <img src="assets/gambar/<?= htmlspecialchars($header['bukti']) ?>"
+                     class="img-fluid rounded"
+                     style="max-width:320px; max-height:450px; object-fit: contain;" 
+                     alt="Bukti Pembayaran">
+            </div>
         <?php } else { ?>
-            <p class="text-muted">Tidak ada bukti pembayaran</p>
+            <p class="text-muted mb-0"><i class="fa-solid fa-circle-info me-2"></i>Belum ada unggahan bukti pembayaran.</p>
         <?php } ?>
     </div>
 

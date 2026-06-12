@@ -12,7 +12,7 @@ if (isset($_POST['login'])) {
     $password = trim($_POST['password']);
 
     // Menggunakan Prepared Statements MySQLi demi keamanan autentikasi
-    $stmt = $koneksi->prepare("SELECT * FROM users WHERE username = ?");
+    $stmt = $koneksi->prepare("SELECT id, username, password, role, foto FROM users WHERE username = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $res = $stmt->get_result();
@@ -23,7 +23,7 @@ if (isset($_POST['login'])) {
         $user = $res->fetch_assoc();
         $loginOK = false;
 
-        // Validasi kecocokan password (hash maupun plain-text)
+        // Validasi kecocokan password (hash berbasis password_hash maupun plain-text)
         if (password_verify($password, $user['password'])) {
             $loginOK = true;
         } elseif ($password === $user['password']) {
@@ -31,11 +31,14 @@ if (isset($_POST['login'])) {
         }
 
         if ($loginOK) {
+            // Mendaftarkan data penting user ke dalam SESSION global
+            $_SESSION['id_user']  = $user['id']; // Ditambahkan untuk relasi transaksi jika diperlukan
             $_SESSION['username'] = $user['username'];
-            $_SESSION['role']     = $user['role'];
+            $_SESSION['role']     = strtolower($user['role']);
             $_SESSION['foto']     = $user['foto'];
 
-            if (strtolower($user['role']) === 'admin') {
+            // Redireksi halaman berdasarkan hak akses (Role)
+            if ($_SESSION['role'] === 'admin') {
                 header("Location: admin.php");
             } else {
                 header("Location: index.php");
@@ -76,7 +79,6 @@ if (isset($_POST['login'])) {
             font-family: 'Poppins', sans-serif;
         }
 
-        /* === CARD STYLE SAMA PERSIS REGISTER === */
         .login-card {
             background: rgba(255,255,255,0.93);
             backdrop-filter: blur(12px);

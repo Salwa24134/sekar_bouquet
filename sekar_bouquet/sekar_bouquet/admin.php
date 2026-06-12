@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 include 'koneksi.php';
 
 // hanya admin
@@ -20,18 +22,30 @@ $totalUser = $user->fetch_assoc()['total'];
 $produk = $koneksi->query("SELECT COUNT(*) as total FROM produk");
 $totalProduk = $produk->fetch_assoc()['total'];
 
-// total pesanan
-$pesanan = $koneksi->query("SELECT COUNT(*) as total FROM pesanan_header");
+// total pesanan (Disesuaikan dari pesanan_header menjadi pesanan)
+$pesanan = $koneksi->query("SELECT COUNT(*) as total FROM pesanan");
 $totalPesanan = $pesanan->fetch_assoc()['total'];
 
-// pesanan terbaru (Menggunakan LIMIT, bukan TOP 5)
+// pesanan terbaru (Menggunakan JOIN ke tabel pelanggan agar data nama & email bisa muncul)
 $sqlRecent = "
-    SELECT * FROM pesanan_header 
-    ORDER BY id DESC 
+    SELECT 
+        p.id_pesanan, 
+        pl.nama, 
+        pl.email, 
+        p.metode_pembayaran, 
+        p.total, 
+        p.status 
+    FROM pesanan p
+    JOIN pelanggan pl ON p.id_pelanggan = pl.id_pelanggan
+    ORDER BY p.id_pesanan DESC 
     LIMIT 5
 ";
 
 $recent = $koneksi->query($sqlRecent);
+
+if ($recent === false) {
+    die("Error Query: " . $koneksi->error);
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -110,21 +124,16 @@ $recent = $koneksi->query($sqlRecent);
         .badge-status {
             background: #b76e79;
             color: white;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
         }
     </style>
 </head>
 
 <body>
 
-<div class="sidebar">
-    <h3 class="mb-4">🌸 Sekar Admin</h3>
-
-    <a href="admin.php"><i class="fa fa-home me-2"></i> Dashboard</a>
-    <a href="produk_admin.php"><i class="fa fa-box me-2"></i> Produk</a>
-    <a href="pesanan_admin.php"><i class="fa fa-receipt me-2"></i> Pesanan</a>
-    <a href="users_admin.php"><i class="fa fa-users me-2"></i> User</a>
-    <a href="logout.php"><i class="fa fa-sign-out me-2"></i> Logout</a>
-</div>
+<?php include 'sidebar.php'; ?>
 
 <div class="main">
 
@@ -183,23 +192,25 @@ $recent = $koneksi->query($sqlRecent);
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Nama</th>
+                        <th>Nama Pelanggan</th>
                         <th>Email</th>
-                        <th>Pembayaran</th>
-                        <th>Total</th>
+                        <th>Metode Pembayaran</th>
+                        <th>Total Harga</th>
                         <th>Status</th>
                     </tr>
                 </thead>
 
                 <tbody>
 
-                    <?php while ($row = $recent->fetch_assoc()) { ?>
-
+                    <?php 
+                    if ($recent->num_rows > 0) {
+                        while ($row = $recent->fetch_assoc()) { 
+                    ?>
                     <tr>
-                        <td>#<?php echo $row['id']; ?></td>
+                        <td>#<?php echo $row['id_pesanan']; ?></td>
                         <td><?php echo htmlspecialchars($row['nama']); ?></td>
                         <td><?php echo htmlspecialchars($row['email']); ?></td>
-                        <td><?php echo htmlspecialchars($row['pembayaran']); ?></td>
+                        <td><?php echo htmlspecialchars($row['metode_pembayaran'] ?? '-'); ?></td>
                         <td>Rp <?php echo number_format($row['total'], 0, ',', '.'); ?></td>
                         <td>
                             <span class="badge badge-status">
@@ -207,8 +218,12 @@ $recent = $koneksi->query($sqlRecent);
                             </span>
                         </td>
                     </tr>
-
-                    <?php } ?>
+                    <?php 
+                        }
+                    } else {
+                        echo "<tr><td colspan='6' class='text-center text-muted py-3'>Belum ada transaksi pesanan terbaru</td></tr>";
+                    }
+                    ?>
 
                 </tbody>
 

@@ -20,8 +20,8 @@ if (isset($_GET['status']) && isset($_GET['id'])) {
     $id = (int)$_GET['id']; // Casting ke int untuk keamanan tambahan
     $status = $_GET['status'];
 
-    // Menghindari SQL injection menggunakan Prepared Statements MySQLi
-    $stmtUpdate = $koneksi->prepare("UPDATE pesanan_header SET status = ? WHERE id = ?");
+    // Perbaikan: pesanan_header -> pesanan, id -> id_pesanan
+    $stmtUpdate = $koneksi->prepare("UPDATE pesanan SET status = ? WHERE id_pesanan = ?");
     $stmtUpdate->bind_param("si", $status, $id);
     $stmtUpdate->execute();
     $stmtUpdate->close();
@@ -33,13 +33,25 @@ if (isset($_GET['status']) && isset($_GET['id'])) {
 /* =========================
    DATA PESANAN (MySQLi)
 ========================= */
+// Menggunakan JOIN ke pelanggan agar kolom nama & email bisa ditarik secara dinamis
 $sql = "
-    SELECT *
-    FROM pesanan_header
-    ORDER BY id DESC
+    SELECT 
+        p.id_pesanan, 
+        pl.nama, 
+        pl.email, 
+        p.metode_pembayaran, 
+        p.total, 
+        p.status
+    FROM pesanan p
+    JOIN pelanggan pl ON p.id_pelanggan = pl.id_pelanggan
+    ORDER BY p.id_pesanan DESC
 ";
 
 $data = $koneksi->query($sql);
+
+if ($data === false) {
+    die("Error Query: " . $koneksi->error);
+}
 ?>
 
 <!DOCTYPE html>
@@ -75,13 +87,17 @@ $data = $koneksi->query($sql);
             color: white;
         }
 
+        .sidebar h3 {
+            color: white;
+        }
+
         .sidebar a {
             display: block;
             color: white;
             padding: 10px;
             text-decoration: none;
-            border-radius: 10px;
             margin-bottom: 10px;
+            border-radius: 10px;
         }
 
         .sidebar a:hover {
@@ -104,16 +120,22 @@ $data = $koneksi->query($sql);
         .badge-wait {
             background: #ffc107;
             color: black;
+            padding: 6px 10px;
+            border-radius: 6px;
         }
 
         .badge-process {
             background: #0d6efd;
             color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
         }
 
         .badge-done {
             background: #198754;
             color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
         }
 
         .btn-main {
@@ -130,14 +152,7 @@ $data = $koneksi->query($sql);
 
 <body>
 
-<div class="sidebar">
-    <h3 class="mb-4">🌸 Sekar Admin</h3>
-    <a href="admin.php">Dashboard</a>
-    <a href="produk_admin.php">Produk</a>
-    <a href="pesanan_admin.php">Pesanan</a>
-    <a href="users_admin.php">User</a>
-    <a href="logout.php">Logout</a>
-</div>
+<?php include 'sidebar.php'; ?>
 
 <div class="main">
 
@@ -148,12 +163,11 @@ $data = $koneksi->query($sql);
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Nama</th>
+                    <th>Nama Pelanggan</th>
                     <th>Email</th>
-                    <th>Pembayaran</th>
+                    <th>Metode Pembayaran</th>
                     <th>Total</th>
                     <th>Status</th>
-                    <th>Bukti</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
@@ -163,13 +177,13 @@ $data = $koneksi->query($sql);
                     while ($row = $data->fetch_assoc()) { 
                 ?>
                 <tr>
-                    <td>#<?= htmlspecialchars($row['id']) ?></td>
+                    <td>#<?= htmlspecialchars($row['id_pesanan']) ?></td>
                     <td><?= htmlspecialchars($row['nama']) ?></td>
                     <td><?= htmlspecialchars($row['email']) ?></td>
-                    <td><?= htmlspecialchars($row['pembayaran']) ?></td>
+                    <td><?= htmlspecialchars($row['metode_pembayaran'] ?? '-') ?></td>
                     <td>Rp <?= number_format($row['total'], 0, ',', '.') ?></td>
                     <td>
-                        <?php if ($row['status'] == 'Menunggu Verifikasi') { ?>
+                        <?php if ($row['status'] == 'Menunggu Verifikasi' || $row['status'] == 'Pending') { ?>
                             <span class="badge badge-wait"><?= htmlspecialchars($row['status']) ?></span>
                         <?php } elseif ($row['status'] == 'Diproses') { ?>
                             <span class="badge badge-process"><?= htmlspecialchars($row['status']) ?></span>
@@ -178,26 +192,15 @@ $data = $koneksi->query($sql);
                         <?php } ?>
                     </td>
                     <td>
-                        <?php if (!empty($row['bukti'])) { ?>
-                            <a href="assets/gambar/<?= htmlspecialchars($row['bukti']) ?>"
-                               target="_blank"
-                               class="btn btn-sm btn-info text-white">
-                                Lihat
-                            </a>
-                        <?php } else { ?>
-                            <span class="text-muted">-</span>
-                        <?php } ?>
-                    </td>
-                    <td>
-                        <a href="?id=<?= $row['id'] ?>&status=Menunggu Verifikasi"
+                        <a href="?id=<?= $row['id_pesanan'] ?>&status=Pending"
                            class="btn btn-sm btn-warning mb-1">
                            Pending
                         </a>
-                        <a href="?id=<?= $row['id'] ?>&status=Diproses"
+                        <a href="?id=<?= $row['id_pesanan'] ?>&status=Diproses"
                            class="btn btn-sm btn-primary mb-1">
                            Proses
                         </a>
-                        <a href="?id=<?= $row['id'] ?>&status=Selesai"
+                        <a href="?id=<?= $row['id_pesanan'] ?>&status=Selesai"
                            class="btn btn-sm btn-success mb-1">
                            Selesai
                         </a>
@@ -208,7 +211,7 @@ $data = $koneksi->query($sql);
                 else:
                 ?>
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-3">Belum ada pesanan masuk.</td>
+                    <td colspan="7" class="text-center text-muted py-3">Belum ada pesanan masuk.</td>
                 </tr>
                 <?php endif; ?>
             </tbody>
