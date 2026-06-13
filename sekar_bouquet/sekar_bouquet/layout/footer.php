@@ -76,9 +76,9 @@ date_default_timezone_set("Asia/Jakarta");
 
         <div class="text-center" style="color: #ffffff !important;">
             <p class="mb-2 small opacity-75" style="font-size: 0.85rem;">
-                <i class="fa-solid fa-envelope me-2"></i> info@sekarbouquet.com
+                <i class="fa-solid fa-envelope me-2"></i> sekarbouquet@gmail.com
                 <span class="mx-3">|</span>
-                <i class="fa-brands fa-instagram me-2"></i> @sekarbouquet
+                <i class="fa-brands fa-instagram me-2"></i> @sekarbouquet.ofc
             </p>
             <p class="mb-0 small opacity-50" style="font-size: 0.8rem; letter-spacing: 0.5px;">
                 &copy; <?php echo date("Y"); ?> Sekar Bouquet Telang. All rights reserved.

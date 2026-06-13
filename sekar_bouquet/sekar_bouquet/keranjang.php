@@ -22,7 +22,35 @@ $potongan_voucher = 0;
 $kode_voucher_aktif = "";
 
 /* ==========================================================================
-   ENGINE SINKRONISASI REWARD VOUCHER LOYALITAS HASIL CALCULATE DATABASE CURSOR
+   1. HITUNG TOTAL BELANJA KOMPONEN TERLEBIH DAHULU (UNTUK MENENTUKAN ONGKOS RAKIT)
+   ========================================================================== */
+if (!empty($_SESSION['keranjang'])) {
+    foreach ($_SESSION['keranjang'] as $id_produk => $qty) {
+        $stmt = $koneksi->prepare("SELECT harga_jual FROM produk WHERE id_produk = ?");
+        $stmt->bind_param("i", $id_produk);
+        $stmt->execute();
+        $produk = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        
+        if ($produk) {
+            $total_belanja += ($produk['harga_jual'] * $qty);
+        }
+    }
+}
+
+/* ==========================================================================
+   2. LOGIKA DINAMIS ONGKOS RAKIT BERDASARKAN TOTAL BELANJA
+   ========================================================================== */
+if ($total_belanja < 200000) {
+    $ongkos_rakit = 25000;
+} elseif ($total_belanja >= 200000 && $total_belanja <= 499000) {
+    $ongkos_rakit = 50000;
+} else {
+    $ongkos_rakit = 75000;
+}
+
+/* ==========================================================================
+   3. ENGINE SINKRONISASI REWARD VOUCHER LOYALITAS HASIL CALCULATE DATABASE CURSOR
    ========================================================================== */
 if (isset($_SESSION['id_pelanggan'])) {
     $id_user_login = $_SESSION['id_pelanggan'];
@@ -40,6 +68,9 @@ if (isset($_SESSION['id_pelanggan'])) {
     }
     $query_v->close();
 }
+
+// Reset ulang untuk hitungan loop di tabel HTML di bawah agar tidak double
+$total_belanja_tabel = 0; 
 ?>
 
 <!DOCTYPE html>
@@ -123,7 +154,7 @@ if (isset($_SESSION['id_pelanggan'])) {
                                         if (!$produk) continue;
 
                                         $subtotal = $produk['harga_jual'] * $qty;
-                                        $total_belanja += $subtotal;
+                                        $total_belanja_tabel += $subtotal;
                                     ?>
                                     <tr>
                                         <td>
@@ -153,7 +184,13 @@ if (isset($_SESSION['id_pelanggan'])) {
                     
                     <div class="d-flex justify-content-between mb-2 small">
                         <span class="text-muted">Total Harga Komponen</span>
-                        <span class="fw-semibold">Rp <?php echo number_format($total_belanja, 0, ',', '.'); ?></span>
+                        <span class="fw-semibold">Rp <?php echo number_format($total_belanja_tabel, 0, ',', '.'); ?></span>
+                    </div>
+
+                    <div class="d-flex justify-content-between mb-2 small">
+                        <span class="text-muted">Ongkos Jasa Rangkai (Rakit)</span>
+                        <span class="fw-semibold text-dark">+ Rp <?php echo number_format($ongkos_rakit, 0, ',', '.'); ?></span>
+                        <input type="hidden" name="ongkos_rakit" value="<?php echo $ongkos_rakit; ?>">
                     </div>
 
                     <?php if ($potongan_voucher > 0): ?>
@@ -163,13 +200,13 @@ if (isset($_SESSION['id_pelanggan'])) {
                         </div>
                         <div class="voucher-badge-alert my-3 small text-start">
                             <span class="fw-bold text-dark d-block mb-1"><i class="fa fa-ticket-alt me-1" style="color: #b76e79;"></i> Kupon Berhasil Dipasang!</span>
-                            <p class="text-muted mb-0" style="font-size: 0.8rem;">Potongan kustom 10% hasil audit loyalitas database Anda langsung memotong nota tagihan ini.</p>
+                            <p class="text-muted mb-0" style="font-size: 0.8rem;">Potongan kustom hasil audit loyalitas database Anda langsung memotong nota tagihan ini.</p>
                         </div>
                     <?php endif; ?>
 
                     <?php 
-                    // Menghitung Final Total Nota Belanja setelah dipotong voucher kursor
-                    $final_total_bayar = $total_belanja - $potongan_voucher;
+                    // KALKULASI FINAL TOTAL AKHIR
+                    $final_total_bayar = ($total_belanja_tabel + $ongkos_rakit) - $potongan_voucher;
                     if($final_total_bayar < 0) $final_total_bayar = 0;
                     ?>
 

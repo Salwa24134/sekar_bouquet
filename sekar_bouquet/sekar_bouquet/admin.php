@@ -58,7 +58,7 @@ if ($recent === false) {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
-<style>
+    <style>
         body { 
             font-family: 'Poppins', sans-serif; 
             background: #fff4f7; 

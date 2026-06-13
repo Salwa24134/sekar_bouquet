@@ -10,7 +10,21 @@ if (!isset($_SESSION['username'])) {
     exit();
 }
 
-// AMBIL DATA
+// AMBIL ID PELANGGAN BERDASARKAN USERNAME SESSION
+// Catatan: Menyesuaikan relasi agar query voucher tepat sasaran ke id_pelanggan
+$username_session = $_SESSION['username'];
+$query_user = $koneksi->prepare("SELECT id_pelanggan FROM pelanggan WHERE nama = ? LIMIT 1");
+if(!$query_user) {
+    // Jika tabel pelanggan Anda menggunakan kolom 'username', sesuaikan klausa WHERE-nya
+    $query_user = $koneksi->prepare("SELECT id_pelanggan FROM pelanggan WHERE username = ? LIMIT 1");
+}
+$query_user->bind_param("s", $username_session);
+$query_user->execute();
+$res_user = $query_user->get_result()->fetch_assoc();
+$id_pelanggan = $res_user['id_pelanggan'] ?? 0;
+$query_user->close();
+
+// AMBIL DATA PRODUK YANG DIPILIH
 $produkDipilih = $_POST['produk_id'] ?? [];
 $jumlahDipilih = $_POST['jumlah'] ?? [];
 
@@ -71,6 +85,48 @@ if (empty($daftarProduk)) {
     </script>";
     exit();
 }
+
+/* ==========================================================================
+   ENGINE SINKRONISASI: HITUNG ESTIMASI ONGKOS RAKIT BERDASARKAN TOTAL PRODUK
+   ========================================================================== */
+$total_produk = $total; // Mengamankan harga murni komponen bouquet
+
+if ($total_produk < 200000) {
+    $ongkos_rakit = 25000;
+} elseif ($total_produk >= 200000 && $total_produk < 500000) {
+    $ongkos_rakit = 50000;
+} else {
+    $ongkos_rakit = 75000;
+}
+
+/* ==========================================================================
+   ENGINE VOUCHER LOYALITAS: CEK APAKAH USER MEMILIKI VOUCHER AKTIF HASIL CURSOR
+   ========================================================================== */
+$potongan_voucher = 0;
+$kode_voucher_aktif = "";
+$id_voucher_aktif = 0;
+
+if ($id_pelanggan > 0) {
+    $stmt_v = $koneksi->prepare("SELECT id_voucher, kode_voucher, potongan_harga FROM voucher_pelanggan WHERE id_pelanggan = ? AND status_aktif = 'Aktif' LIMIT 1");
+    $stmt_v->bind_param("i", $id_pelanggan);
+    $stmt_v->execute();
+    $res_v = $stmt_v->get_result()->fetch_assoc();
+    
+    if ($res_v) {
+        $id_voucher_aktif = $res_v['id_voucher'];
+        $kode_voucher_aktif = $res_v['kode_voucher'];
+        $potongan_voucher = (int)$res_v['potongan_harga'];
+    }
+    $stmt_v->close();
+}
+
+// Total akhir digabungkan dengan ongkos rakit dikurangi potongan voucher loyalitas
+$total_akhir = ($total_produk + $ongkos_rakit) - $potongan_voucher;
+
+// Antitesis proteksi jika nilai total minus (keamanan kalkulasi)
+if ($total_akhir < 0) {
+    $total_akhir = 0;
+}
 ?>
 
 <!DOCTYPE html>
@@ -106,6 +162,17 @@ if (empty($daftarProduk)) {
         <div class="col-lg-8">
             <div class="card checkout-card p-4 p-md-5">
                 <h4 class="mb-4 border-bottom pb-3"><i class="fa-solid fa-receipt me-2"></i> Ringkasan Komponen & Produk</h4>
+                
+                <?php if ($potongan_voucher > 0): ?>
+                    <div class="alert alert-success d-flex align-items-center mb-4 border-0 p-3" style="border-radius: 14px; background-color: #e8f5e9; color: #2e7d32;">
+                        <i class="fa-solid fa-ticket-simple fs-4 me-3"></i>
+                        <div>
+                            <span class="fw-bold d-block">Selamat! Voucher Loyalitas Terpasang 🎉</span>
+                            <small>Anda mendapatkan potongan otomatis senilai <b>Rp <?php echo number_format($potongan_voucher, 0, ',', '.'); ?></b> melalui kode voucher resmi Anda: <code class="bg-white px-2 py-1 rounded border fw-bold text-success" style="font-size: 0.9rem;"><?php echo $kode_voucher_aktif; ?></code></small>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <ul class="list-group mb-4">
                     <?php foreach ($daftarProduk as $p) { ?>
                         <li class="list-group-item d-flex justify-content-between align-items-center border-0 border-bottom py-3">
@@ -116,9 +183,27 @@ if (empty($daftarProduk)) {
                             <span class="fw-bold" style="color: #b76e79;">Rp <?php echo number_format($p['subtotal'], 0, ',', '.'); ?></span>
                         </li>
                     <?php } ?>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center border-0 border-bottom py-2 mt-2 small">
+                        <span class="text-muted">Total Harga</span>
+                        <span class="fw-medium text-dark">Rp <?php echo number_format($total_produk, 0, ',', '.'); ?></span>
+                    </li>
+
+                    <li class="list-group-item d-flex justify-content-between align-items-center border-0 border-bottom py-2 small">
+                        <span class="text-muted">Ongkos Rakit</span>
+                        <span class="fw-medium text-danger">Rp <?php echo number_format($ongkos_rakit, 0, ',', '.'); ?></span>
+                    </li>
+                    
+                    <?php if ($potongan_voucher > 0): ?>
+                    <li class="list-group-item d-flex justify-content-between align-items-center border-0 border-bottom py-2 small bg-light rounded-3 my-1">
+                        <span class="text-success fw-medium"><i class="fa-solid fa-tags me-1"></i> Potongan Voucher (<?php echo $kode_voucher_aktif; ?>)</span>
+                        <span class="fw-bold text-success">- Rp <?php echo number_format($potongan_voucher, 0, ',', '.'); ?></span>
+                    </li>
+                    <?php endif; ?>
+                    
                     <li class="list-group-item d-flex justify-content-between align-items-center border-0 pt-4">
                         <h5 class="mb-0">Total Pembayaran</h5>
-                        <h4 class="mb-0 fw-bold" style="color: #8d4f5c;">Rp <?php echo number_format($total, 0, ',', '.'); ?></h4>
+                        <h4 class="mb-0 fw-bold" style="color: #8d4f5c;">Rp <?php echo number_format($total_akhir, 0, ',', '.'); ?></h4>
                     </li>
                 </ul>
 
@@ -127,6 +212,9 @@ if (empty($daftarProduk)) {
                         <input type="hidden" name="produk_id[]" value="<?php echo $p['id']; ?>">
                         <input type="hidden" name="jumlah[<?php echo $p['id']; ?>]" value="<?php echo $p['jumlah']; ?>">
                     <?php } ?>
+                    
+                    <input type="hidden" name="id_voucher" value="<?php echo $id_voucher_aktif; ?>">
+                    <input type="hidden" name="potongan_voucher" value="<?php echo $potongan_voucher; ?>">
 
                     <h5 class="mb-3 mt-2 text-muted"><i class="fa-solid fa-user me-2"></i> Data Pemesan & Pengiriman</h5>
                     <div class="row">
@@ -185,21 +273,21 @@ if (empty($daftarProduk)) {
                         </select>
                     </div>
 
-                    <div id="bank_section" style="display:none;" class="mb-4 text-center">
+                    <div class="box-pembayaran border mb-4 shadow-sm text-start" id="bank_section" style="display:none;">
                         <label class="form-label d-block text-start">Pilih Bank Tujuan</label>
-                        <div class="row g-2">
-                            <div class="col-4"><div id="bank_bca" class="card p-3 bank-option" onclick="pilihBank('BCA')">BCA</div></div>
-                            <div class="col-4"><div id="bank_bri" class="card p-3 bank-option" onclick="pilihBank('BRI')">BRI</div></div>
-                            <div class="col-4"><div id="bank_mandiri" class="card p-3 bank-option" onclick="pilihBank('Mandiri')">Mandiri</div></div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-4"><div id="bank_bca" class="card p-3 bank-option text-center" onclick="pilihBank('BCA')">BCA</div></div>
+                            <div class="col-4"><div id="bank_bri" class="card p-3 bank-option text-center" onclick="pilihBank('BRI')">BRI</div></div>
+                            <div class="col-4"><div id="bank_mandiri" class="card p-3 bank-option text-center" onclick="pilihBank('Mandiri')">Mandiri</div></div>
                         </div>
                         <input type="hidden" name="bank_nama" id="bank_nama_input">
-                    </div>
-
-                    <div id="detail_rekening" style="display:none;" class="box-pembayaran border mb-4 shadow-sm text-start">
-                        <h5 id="nama_bank" class="mb-1" style="color: #8d4f5c;"></h5>
-                        <h4 id="no_rek" class="fw-bold mb-3" style="color: #b76e79;"></h4>
-                        <label class="form-label small">Upload Bukti Transfer</label>
-                        <input type="file" name="bukti_transfer" id="bukti_transfer" class="form-control" accept="image/*">
+                        
+                        <div id="detail_rekening" style="display:none;" class="mt-3 pt-3 border-top">
+                            <h5 id="nama_bank" class="mb-1" style="color: #8d4f5c;"></h5>
+                            <h4 id="no_rek" class="fw-bold mb-3" style="color: #b76e79;"></h4>
+                            <label class="form-label small">Upload Bukti Transfer</label>
+                            <input type="file" name="bukti_transfer" id="bukti_transfer" class="form-control" accept="image/*">
+                        </div>
                     </div>
 
                     <div id="ewallet_section" style="display:none;" class="box-pembayaran border mb-4 shadow-sm text-center">
@@ -262,19 +350,16 @@ function pilihBank(bank) {
     }
 }
 
-// PERBAIKAN VALIDASI UTAMA: Mengunci Form Onsubmit agar Jam Tidak Bisa Diakali Inspect Element
 document.getElementById("formCheckout").onsubmit = function() {
     var metode = document.getElementById("metode_pembayaran").value;
     var bankNama = document.getElementById("bank_nama_input").value;
     var inputWaktu = document.getElementById("waktu_pengiriman").value;
 
-    // 1. Cek pengisian metode pembayaran
     if (metode == "Transfer Bank" && !bankNama) {
         alert("Silakan pilih bank terlebih dahulu!");
         return false;
     }
 
-    // 2. Kunci Jam Real-time (JavaScript Unix Timestamp)
     if (!inputWaktu) {
         alert("Waktu pengiriman wajib ditentukan!");
         return false;
@@ -282,8 +367,6 @@ document.getElementById("formCheckout").onsubmit = function() {
 
     var waktuUser = new Date(inputWaktu).getTime();
     var waktuSekarang = new Date().getTime();
-    
-    // Batas minimal: Sekarang + 24 jam (24 jam * 60 menit * 60 detik * 1000 milidetik)
     var batasMinimal = waktuSekarang + (24 * 60 * 60 * 1000);
 
     if (waktuUser < waktuSekarang) {

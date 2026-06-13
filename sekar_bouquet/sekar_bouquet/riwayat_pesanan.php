@@ -12,7 +12,16 @@ if (!$id_user) {
     exit();
 }
 
-$sql = "SELECT * FROM pesanan WHERE id_pelanggan = ? ORDER BY id_pesanan DESC";
+// QUERY NORMAL (Mengambil seluruh data pesanan pelanggan)
+$sql = "SELECT 
+            p.*, 
+            bc.ongkos_rakit,
+            (SELECT SUM(subtotal) FROM detail_pesanan dp WHERE dp.id_pesanan = p.id_pesanan) AS total_komponen
+        FROM pesanan p 
+        LEFT JOIN bouquet_custom bc ON p.id_pesanan = bc.id_pesanan
+        WHERE p.id_pelanggan = ? 
+        ORDER BY p.id_pesanan DESC";
+
 $stmt = $koneksi->prepare($sql);
 $stmt->bind_param("i", $id_user);
 $stmt->execute();
@@ -33,7 +42,7 @@ $result = $stmt->get_result();
     <style>
         body { background: #fff8f9; font-family: 'Poppins', sans-serif; }
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
-        .card-order { background: #fff; border: none; border-radius: 20px; box-shadow: 0 10px 30px rgba(183, 110, 121, 0.05); overflow: hidden; transition: all 0.3s ease; display: flex; flex-column: normal; flex-direction: column; justify-content: space-between; }
+        .card-order { background: #fff; border: none; border-radius: 20px; box-shadow: 0 10px 30px rgba(183, 110, 121, 0.05); overflow: hidden; transition: all 0.3s ease; display: flex; flex-direction: column; justify-content: space-between; }
         .card-order:hover { transform: translateY(-5px); box-shadow: 0 15px 35px rgba(183, 110, 121, 0.12); }
         .header-img { width: 100%; height: 160px; object-fit: cover; }
         .content { padding: 22px; font-size: 13px; flex-grow: 1; display: flex; flex-direction: column; }
@@ -75,7 +84,11 @@ $result = $stmt->get_result();
             <?php
                 $id = $row['id_pesanan'];
                 $status_db = trim($row['status']);
-                
+
+                // LOGIKA BARU: Cek apakah ini pesanan kustom berdasarkan ongkos rakit
+                $ongkos_rakit     = (int)($row['ongkos_rakit'] ?? 0);
+                $info_pesanan     = ($ongkos_rakit > 0) ? "Pesanan Kustom ✨" : "Katalog Produk 🌸";
+
                 // Normalisasi penentuan class badge CSS dinamis berdasarkan status di database
                 $badge_class = "status-pending"; 
                 if (strcasecmp($status_db, 'selesai') == 0) {
@@ -85,6 +98,15 @@ $result = $stmt->get_result();
                 } elseif (strcasecmp($status_db, 'dibatalkan') == 0) {
                     $badge_class = "status-dibatalkan";
                 }
+
+                // Kalkulasi Perhitungan Potongan Voucher Secara Mandiri
+                $total_komponen   = (int)($row['total_komponen'] ?? 0);
+                $subtotal_asli    = $total_komponen + $ongkos_rakit;
+                $total_akhir_db   = (int)$row['total'];
+
+                // Rumus kalkulasi nilai selisih voucher
+                $potongan_voucher = $subtotal_asli - $total_akhir_db;
+                if ($potongan_voucher < 0) $potongan_voucher = 0;
 
                 // Query mengambil item pertama sebagai wajah/banner utama card
                 $q_first = $koneksi->prepare("SELECT pr.gambar FROM detail_pesanan dp JOIN produk pr ON pr.id_produk = dp.id_produk WHERE dp.id_pesanan = ? LIMIT 1");
@@ -105,7 +127,9 @@ $result = $stmt->get_result();
 
                 <div class="content">
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="fw-bold text-dark fs-6">Nota #<?= $id; ?></span>
+                        <span class="fw-bold text-dark fs-6" style="font-size: 14px !important; color: #b76e79 !important;">
+                            <?= $info_pesanan; ?>
+                        </span>
                         <span class="badge <?= $badge_class; ?>"><?= htmlspecialchars($status_db); ?></span>
                     </div>
 
@@ -133,9 +157,22 @@ $result = $stmt->get_result();
                     </div>
 
                     <div class="mt-auto">
+                        <div class="bg-light p-2 rounded mb-2 style-muted" style="font-size: 11px;">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Total Barang & Rakit:</span>
+                                <span class="text-dark">Rp <?= number_format($subtotal_asli, 0, ',', '.'); ?></span>
+                            </div>
+                            <?php if ($potongan_voucher > 0): ?>
+                            <div class="d-flex justify-content-between text-success fw-medium mt-1">
+                                <span><i class="fa-solid fa-ticket me-1"></i>Potongan Voucher:</span>
+                                <span>- Rp <?= number_format($potongan_voucher, 0, ',', '.'); ?></span>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+
                         <div class="d-flex justify-content-between align-items-center pt-2 border-top">
-                            <span class="text-muted small">Total Tagihan:</span>
-                            <span class="fw-bold fs-6" style="color: #8d4f5c;">Rp <?= number_format($row['total'], 0, ',', '.'); ?></span>
+                            <span class="text-muted small fw-bold">Total Tagihan:</span>
+                            <span class="fw-bold fs-6" style="color: #8d4f5c;">Rp <?= number_format($total_akhir_db, 0, ',', '.'); ?></span>
                         </div>
 
                         <div class="mt-3">
@@ -150,10 +187,17 @@ $result = $stmt->get_result();
                                     <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Buket sedang dirangkai tim
                                 </div>
                             <?php else: ?>
-                                <div class="alert alert-warning py-2 px-3 m-0 small text-center" style="border-radius: 12px; font-size: 12px;">
+                                <div class="alert alert-warning py-2 px-3 m-0 mb-2 small text-center" style="border-radius: 12px; font-size: 12px;">
                                     <i class="fa fa-hourglass-half me-1"></i> Menunggu Konfirmasi Pembayaran
                                 </div>
                             <?php endif; ?>
+
+                            <a href="hapus_pesanan.php?id_pesanan=<?= $id; ?>" 
+                               onclick="return confirm('Apakah Anda yakin ingin menghapus riwayat pesanan ini?')" 
+                               class="btn btn-outline-danger btn-sm w-100 py-2 mt-1" 
+                               style="border-radius: 12px; font-size: 12px; font-weight: 500;">
+                               <i class="fa fa-trash me-1"></i> Hapus Riwayat Pesanan
+                            </a>
                         </div>
                     </div>
                 </div>

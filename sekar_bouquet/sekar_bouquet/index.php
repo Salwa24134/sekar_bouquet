@@ -77,18 +77,30 @@ if (isset($_SESSION['id_pelanggan'])) {
             box-shadow: 0 8px 20px rgba(183, 110, 121, 0.3);
         }
 
-        .product-card {
+        /* --- GALLERY DISPLAY CARD (GUEST VERSION) --- */
+        .gallery-card {
             border-radius: 24px;
             border: none;
             overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
             background: white;
-            box-shadow: 0 8px 25px rgba(183, 110, 121, 0.04);
+            box-shadow: 0 10px 30px rgba(183, 110, 121, 0.06);
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
         }
 
-        .product-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 35px rgba(183, 110, 121, 0.12);
+        .gallery-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 35px rgba(183, 110, 121, 0.15);
+        }
+
+        .gallery-img {
+            width: 100%;
+            height: 340px; /* Tinggi seragam, tegak, dan proporsional */
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .gallery-card:hover .gallery-img {
+            transform: scale(1.04);
         }
 
         /* --- SECTION TRIVIA / INFORMASI --- */
@@ -182,10 +194,9 @@ if (isset($_SESSION['id_pelanggan'])) {
                     $gambar_produk = !empty($row['gambar']) ? $row['gambar'] : 'default.jpg';
             ?>
             <div class="col-md-3">
-                <div class="card product-card h-100">
+                <div class="card gallery-card h-100">
                     <img src="assets/gambar/<?php echo htmlspecialchars($gambar_produk); ?>"
-                         class="card-img-top"
-                         style="height:240px;object-fit:cover;"
+                         class="gallery-img"
                          alt="<?php echo htmlspecialchars($row['nama_produk']); ?>">
 
                     <div class="card-body text-center d-flex flex-column p-4">
@@ -205,17 +216,40 @@ if (isset($_SESSION['id_pelanggan'])) {
             ?>
         </div>
     <?php else: ?>
-        <div class="card text-center p-5 mx-auto shadow-sm border-0" style="max-width: 750px; background: #fff; border-radius: 20px;">
-            <div class="card-body">
-                <i class="fa-solid fa-lock text-muted mb-3" style="font-size: 2.5rem; color: #b76e79 !important;"></i>
-                <h4 class="fw-bold mb-2">Ingin Melihat Koleksi Cantik Kami?</h4>
-                <p class="text-muted small mb-4 mx-auto" style="max-width: 500px;">
-                    Silakan masuk atau daftarkan akun Anda terlebih dahulu untuk membuka katalog lengkap buket wisuda premium Sekar Bouquet khusus area Telang & Kamal.
-                </p>
-                <div class="d-flex justify-content-center gap-3">
-                    <a href="login.php" class="btn btn-main px-4 py-2">Login</a>
-                    <a href="register.php" class="btn btn-outline-secondary rounded-pill px-4 py-2">Daftar Akun</a>
+        <h2 class="text-center mb-2 fw-bold">Koleksi Rangkaian Buket Cantik ✨</h2>
+        <p class="text-center text-muted small mb-5">Inspirasi kreasi premium buatan tim florist Sekar Bouquet</p>
+
+        <div class="row g-4 mb-5">
+            <div class="col-md-3">
+                <div class="gallery-card">
+                    <img src="assets/gambar/besar.jpg" class="gallery-img" alt="Kreasi Buket Sekar Bouquet" onerror="this.onerror=null; this.src='https://placehold.co/400x550?text=besar.jpg+Mising';">
                 </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="gallery-card">
+                    <img src="assets/gambar/thumbelina.jpg" class="gallery-img" alt="Kreasi Buket Sekar Bouquet" onerror="this.onerror=null; this.src='https://placehold.co/400x550?text=thumbelina.jpg+Mising';">
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="gallery-card">
+                    <img src="assets/gambar/thumbelina2.jpg" class="gallery-img" alt="Kreasi Buket Sekar Bouquet" onerror="this.onerror=null; this.src='https://placehold.co/400x550?text=thumbelina2.jpg+Mising';">
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="gallery-card">
+                    <img src="assets/gambar/wisuda.jpg" class="gallery-img" alt="Kreasi Buket Sekar Bouquet" onerror="this.onerror=null; this.src='https://placehold.co/400x550?text=wisuda.jpg+Mising';">
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center p-4 shadow-sm border-0 mx-auto bg-white" style="max-width: 650px; border-radius: 20px;">
+            <p class="small text-muted mb-3"><i class="fa-solid fa-circle-info text-secondary me-1"></i> Suka dengan contoh buket kami? Masuk atau daftar akun untuk melakukan pesanan kustom.</p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="login.php" class="btn btn-main px-4 py-2 btn-sm">Login Masuk</a>
+                <a href="register.php" class="btn btn-outline-secondary rounded-pill px-4 py-2 btn-sm">Daftar Akun Baru</a>
             </div>
         </div>
     <?php endif; ?>

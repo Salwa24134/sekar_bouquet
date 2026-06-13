@@ -12,56 +12,84 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
     exit();
 }
 
+$msg = "";
+$msg_type = "";
+
 /* =========================
-   DELETE SUPPLIER (MySQLi)
+   REVISI: DELETE SUPPLIER (Safe Mode)
 ========================= */
 if (isset($_GET['delete'])) {
     $id = (int)$_GET['delete'];
 
-    $stmtDel = $koneksi->prepare("DELETE FROM supplier WHERE id_supplier = ?");
-    $stmtDel->bind_param("i", $id);
-    $stmtDel->execute();
-    $stmtDel->close();
-
-    header("Location: supplier_admin.php");
-    exit();
+    try {
+        $stmtDel = $koneksi->prepare("DELETE FROM supplier WHERE id_supplier = ?");
+        $stmtDel->bind_param("i", $id);
+        
+        if ($stmtDel->execute()) {
+            header("Location: supplier_admin.php?status=deleted");
+            exit();
+        }
+        $stmtDel->close();
+    } catch (mysqli_sql_exception $e) {
+        header("Location: supplier_admin.php?status=restricted");
+        exit();
+    }
 }
 
 /* =========================
-   INSERT SUPPLIER (MySQLi)
+   REVISI: INSERT SUPPLIER (+ EMAIL)
 ========================= */
 if (isset($_POST['tambah'])) {
     $nama      = trim($_POST['nama_supplier']);
-    $telepon   = trim($_POST['telepon']); // Mengambil dari input form
+    $telepon   = trim($_POST['telepon']); 
+    $email     = trim($_POST['email']); // Menangkap input email baru
     $alamat    = trim($_POST['alamat']);
 
-    // Perbaikan: Kolom kontak diubah menjadi telepon sesuai database Anda
-    $stmtIns = $koneksi->prepare("INSERT INTO supplier (nama_supplier, telepon, alamat) VALUES (?, ?, ?)");
-    $stmtIns->bind_param("sss", $nama, $telepon, $alamat);
+    $stmtIns = $koneksi->prepare("INSERT INTO supplier (nama_supplier, telepon, email, alamat) VALUES (?, ?, ?, ?)");
+    $stmtIns->bind_param("ssss", $nama, $telepon, $email, $alamat);
     $stmtIns->execute();
     $stmtIns->close();
 
-    header("Location: supplier_admin.php");
+    header("Location: supplier_admin.php?status=inserted");
     exit();
 }
 
 /* =========================
-   EDIT SUPPLIER (MySQLi)
+   REVISI: EDIT SUPPLIER (+ EMAIL)
 ========================= */
 if (isset($_POST['update'])) {
     $id        = (int)$_POST['id'];
     $nama      = trim($_POST['nama_supplier']);
-    $telepon   = trim($_POST['telepon']); // Mengambil dari input form
+    $telepon   = trim($_POST['telepon']); 
+    $email     = trim($_POST['email']); // Menangkap input email edit
     $alamat    = trim($_POST['alamat']);
 
-    // Perbaikan: Kolom kontak diubah menjadi telepon sesuai database Anda
-    $stmtUpd = $koneksi->prepare("UPDATE supplier SET nama_supplier=?, telepon=?, alamat=? WHERE id_supplier=?");
-    $stmtUpd->bind_param("sssi", $nama, $telepon, $alamat, $id);
+    $stmtUpd = $koneksi->prepare("UPDATE supplier SET nama_supplier=?, telepon=?, email=?, alamat=? WHERE id_supplier=?");
+    $stmtUpd->bind_param("ssssi", $nama, $telepon, $email, $alamat, $id);
     $stmtUpd->execute();
     $stmtUpd->close();
 
-    header("Location: supplier_admin.php");
+    header("Location: supplier_admin.php?status=updated");
     exit();
+}
+
+/* =========================
+   NOTIFIKASI STATUS HANDLER
+========================= */
+if (isset($_GET['status'])) {
+    if ($_GET['status'] == 'inserted') {
+        $msg = "Data supplier baru berhasil ditambahkan!";
+        $msg_type = "success";
+    } elseif ($_GET['status'] == 'updated') {
+        $msg = "Data perubahan supplier berhasil disimpan!";
+        $msg_type = "info";
+    } elseif ($_GET['status'] == 'deleted') {
+        $msg = "Supplier berhasil dihapus dari sistem.";
+        $msg_type = "success";
+    } elseif ($_GET['status'] == 'restricted') {
+        $msg = "Gagal menghapus! Supplier ini tidak boleh dihapus karena riwayat restok/retur miliknya masih tercatat di laporan keuangan toko.";
+        $msg_type = "danger";
+    }
 }
 
 /* =========================
@@ -93,7 +121,7 @@ if (isset($_GET['edit'])) {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
-<style>
+    <style>
         body { 
             font-family: 'Poppins', sans-serif; 
             background: #fff4f7; 
@@ -205,65 +233,81 @@ if (isset($_GET['edit'])) {
 
     <h2 class="mb-4">Manajemen Supplier 🚚</h2>
 
-    <div class="card card-box p-4 mb-4">
+    <?php if ($msg != ""): ?>
+        <div class="alert alert-<?= $msg_type ?> alert-dismissible fade show card-box" role="alert">
+            <i class="fa <?= $msg_type == 'danger' ? 'fa-exclamation-triangle' : 'fa-check-circle' ?> me-2"></i>
+            <?= $msg ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <div class="card card-box p-4 mb-4 bg-white">
         <form method="post">
 
             <?php if ($edit): ?>
                 <input type="hidden" name="id" value="<?= htmlspecialchars($edit['id_supplier']) ?>">
-                <h5>Edit Supplier</h5>
+                <h5>Edit Data Supplier</h5>
             <?php else: ?>
-                <h5>Tambah Supplier</h5>
+                <h5>Tambah Supplier Baru</h5>
             <?php endif; ?>
 
-            <div class="row">
-                <div class="col-md-4">
-                    <label class="form-label small text-muted">Nama Supplier</label>
-                    <input type="text" name="nama_supplier" class="form-control mb-2"
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted fw-bold">Nama Supplier</label>
+                    <input type="text" name="nama_supplier" class="form-control"
                            placeholder="Contoh: PT. Bunga Indah"
                            value="<?= isset($edit['nama_supplier']) ? htmlspecialchars($edit['nama_supplier']) : '' ?>" required>
                 </div>
 
                 <div class="col-md-3">
-                    <label class="form-label small text-muted">No. Telepon</label>
-                    <input type="text" name="telepon" class="form-control mb-2"
+                    <label class="form-label small text-muted fw-bold">No. Telepon</label>
+                    <input type="text" name="telepon" class="form-control"
                            placeholder="Contoh: 08123456xxx"
                            value="<?= isset($edit['telepon']) ? htmlspecialchars($edit['telepon']) : '' ?>" required>
                 </div>
 
-                <div class="col-md-5">
-                    <label class="form-label small text-muted">Alamat</label>
-                    <input type="text" name="alamat" class="form-control mb-2"
-                           placeholder="Masukkan alamat lengkap supplier"
+                <div class="col-md-3">
+                    <label class="form-label small text-muted fw-bold">Email Supplier</label>
+                    <input type="email" name="email" class="form-control"
+                           placeholder="Contoh: vendor@email.com"
+                           value="<?= isset($edit['email']) ? htmlspecialchars($edit['email']) : '' ?>" required>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label small text-muted fw-bold">Alamat Toko / Gudang</label>
+                    <input type="text" name="alamat" class="form-control"
+                           placeholder="Masukkan alamat lengkap"
                            value="<?= isset($edit['alamat']) ? htmlspecialchars($edit['alamat']) : '' ?>" required>
                 </div>
             </div>
 
-            <div class="mt-2">
+            <div class="mt-3">
                 <button type="submit"
                         name="<?= $edit ? 'update' : 'tambah' ?>"
                         class="btn btn-main">
-                    <?= $edit ? 'Update' : 'Tambah' ?> Supplier
+                    <i class="fa <?= $edit ? 'fa-save' : 'fa-plus-circle' ?> me-1"></i> <?= $edit ? 'Update' : 'Tambah' ?> Supplier
                 </button>
 
                 <?php if ($edit): ?>
-                    <a href="supplier_admin.php" class="btn btn-secondary">Batal</a>
+                    <a href="supplier_admin.php" class="btn btn-secondary"><i class="fa fa-times me-1"></i> Batal</a>
                 <?php endif; ?>
             </div>
 
         </form>
     </div>
 
-    <div class="card card-box p-4">
-        <h5>Daftar Supplier</h5>
+    <div class="card card-box p-4 bg-white">
+        <h5 class="mb-3 fw-bold">Daftar Rekanan Supplier</h5>
         <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead>
+            <table class="table table-hover align-middle m-0">
+                <thead class="table-light">
                     <tr>
                         <th>ID</th>
                         <th>Nama Supplier</th>
                         <th>No. Telepon</th>
-                        <th>Alamat</th>
-                        <th>Aksi</th>
+                        <th>Email</th>
+                        <th>Alamat Vendor</th>
+                        <th class="text-center">Aksi Manajemen</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -272,15 +316,16 @@ if (isset($_GET['edit'])) {
                         while ($row = $data->fetch_assoc()) { 
                     ?>
                     <tr>
-                        <td>#<?= htmlspecialchars($row['id_supplier']) ?></td>
-                        <td><b><?= htmlspecialchars($row['nama_supplier']) ?></b></td>
-                        <td><?= htmlspecialchars($row['telepon']) ?></td>
-                        <td><?= htmlspecialchars($row['alamat']) ?></td>
-                        <td>
-                            <a href="?edit=<?= $row['id_supplier'] ?>" class="btn btn-sm btn-warning">Edit</a>
+                        <td><span class="badge bg-dark">#<?= htmlspecialchars($row['id_supplier']) ?></span></td>
+                        <td><span class="text-dark fw-semibold"><?= htmlspecialchars($row['nama_supplier']) ?></span></td>
+                        <td><i class="fa fa-phone text-muted small me-1"></i> <?= htmlspecialchars($row['telepon']) ?></td>
+                        <td><i class="fa fa-envelope text-muted small me-1"></i> <?= htmlspecialchars($row['email']) ?></td>
+                        <td><i class="fa fa-map-marker-alt text-muted small me-1"></i> <?= htmlspecialchars($row['alamat']) ?></td>
+                        <td class="text-center">
+                            <a href="?edit=<?= $row['id_supplier'] ?>" class="btn btn-sm btn-warning"><i class="fa fa-edit"></i> Edit</a>
                             <a href="?delete=<?= $row['id_supplier'] ?>" class="btn btn-sm btn-danger"
-                               onclick="return confirm('Hapus data supplier ini?')">
-                               Hapus
+                               onclick="return confirm('Apakah Anda yakin ingin menghapus vendor supplier ini dari sistem?')">
+                               <i class="fa fa-trash"></i> Hapus
                             </a>
                         </td>
                     </tr>
@@ -289,7 +334,7 @@ if (isset($_GET['edit'])) {
                     else: 
                     ?>
                     <tr>
-                        <td colspan="5" class="text-center text-muted py-3">Belum ada data supplier.</td>
+                        <td colspan="6" class="text-center text-muted py-4">Belum ada mitra supplier yang terdaftar.</td>
                     </tr>
                     <?php endif; ?>
                 </tbody>
@@ -299,5 +344,6 @@ if (isset($_GET['edit'])) {
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

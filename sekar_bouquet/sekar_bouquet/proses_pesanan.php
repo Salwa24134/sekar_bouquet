@@ -34,6 +34,13 @@ $waktu_kirim     = $_POST['waktu_kirim'] ?? '';
 $catatan_kartu   = $_POST['catatan_kartu'] ?? '';
 $catatan_custom  = $_POST['catatan_custom'] ?? '';
 $pembayaran      = $_POST['pembayaran'] ?? '';
+
+/* ==========================================================================
+   INTEGRASI TANGKAP VOUCHER LOYALITAS
+   ========================================================================== */
+$id_voucher       = isset($_POST['id_voucher']) ? (int)$_POST['id_voucher'] : 0;
+$potongan_voucher = isset($_POST['potongan_voucher']) ? (int)$_POST['potongan_voucher'] : 0;
+
 $total           = 0;
 $detailData      = [];
 
@@ -47,7 +54,7 @@ if (!empty($waktu_kirim)) {
 }
 
 /* =====================================================
-   1. VALIDASI + HITUNG PRODUK
+   1. VALIDASI + HITUNG PRODUK MURNI
 ===================================================== */
 foreach ($produkDipilih as $id) {
     $id = (int)$id;
@@ -73,7 +80,7 @@ foreach ($produkDipilih as $id) {
     }
 
     $subtotal = $produk['harga_jual'] * $qty;
-    $total += $subtotal;
+    $total += $subtotal; // Menghitung total harga produk murni
 
     $detailData[] = [
         'id'       => $produk['id_produk'],
@@ -84,8 +91,32 @@ foreach ($produkDipilih as $id) {
     ];
 }
 
+/* ==========================================================================
+   ENGINE LOGIKA BISNIS: HITUNG ONGKOS RAKIT BERDASARKAN TOTAL BELANJA PRODUK
+   ========================================================================== */
+$total_produk = $total; // Mengamankan nominal harga produk asli
+
+if ($total_produk < 200000) {
+    $ongkos_rakit = 25000;
+} elseif ($total_produk >= 200000 && $total_produk < 500000) {
+    $ongkos_rakit = 50000;
+} else {
+    $ongkos_rakit = 75000;
+}
+
+// Tambahkan ongkos rakit bertingkat ke dalam akumulasi total akhir
+$total += $ongkos_rakit; 
+
+// Kurangi dengan potongan voucher loyalitas hasil tangkapan engine cursor
+$total = $total - $potongan_voucher;
+
+// Proteksi antitesis nilai minus aman kalkulasi
+if ($total < 0) {
+    $total = 0;
+}
+
 /* =====================================================
-   2. UPLOAD BUKTI PEMBAYARAN 
+   2. UPLOAD BUKTI PEMBAYARAN (Ke Folder assets/bukti/)
 ===================================================== */
 $buktiName = "";
 $file = null;
@@ -97,7 +128,6 @@ if (!empty($_FILES['bukti_transfer']['name'])) {
 }
 
 if ($file && $file['error'] == 0) {
-    // Dipindah khusus ke folder assets/bukti/
     $folder = "assets/bukti/"; 
     if (!is_dir($folder)) mkdir($folder, 0777, true);
 
@@ -136,6 +166,7 @@ $cekPelanggan->close();
 $koneksi->begin_transaction();
 
 try {
+    // Nilai $total di bawah sudah akurat (Harga komponen + Ongkos rakit dinamis - Potongan Voucher)
     $sqlInsert = "INSERT INTO pesanan (id_pelanggan, tanggal, total, status, metode_pembayaran, bukti) VALUES (?, NOW(), ?, 'Pending', ?, ?)";
     $stmtHeader = $koneksi->prepare($sqlInsert);
     $stmtHeader->bind_param("iiss", $id_pelanggan, $total, $pembayaran, $buktiName);
@@ -143,15 +174,25 @@ try {
     $id_pesanan = $koneksi->insert_id;
     $stmtHeader->close();
 
+    /* ==========================================================================
+       ENGINE DEAKTIVASI VOUCHER (Sinkronisasi Penggunaan Voucher Agar Tidak Hang)
+       ========================================================================== */
+    if ($id_voucher > 0 && $potongan_voucher > 0) {
+        $stmtUpdateVoucher = $koneksi->prepare("UPDATE voucher_pelanggan SET status_aktif = 'Tidak Aktif' WHERE id_voucher = ? AND id_pelanggan = ?");
+        $stmtUpdateVoucher->bind_param("ii", $id_voucher, $id_pelanggan);
+        $stmtUpdateVoucher->execute();
+        $stmtUpdateVoucher->close();
+    }
+
     /* =====================================================
        5. INSERT KE TABEL BUKET CUSTOM (bouquet_custom)
     ===================================================== */
     $nama_bouquet = "Custom Bouquet #" . $id_pesanan;
-    $ongkos_rakit = 15000; 
 
     $sqlCustom = "INSERT INTO bouquet_custom (id_pesanan, nama_bouquet, catatan, ongkos_rakit) VALUES (?, ?, ?, ?)";
     $stmtCustom = $koneksi->prepare($sqlCustom);
     if ($stmtCustom) {
+        // Menyimpan nilai ongkos rakit dinamis (25k / 50k / 75k) hasil kalkulasi engine ke database
         $stmtCustom->bind_param("issi", $id_pesanan, $nama_bouquet, $gabung_catatan, $ongkos_rakit);
         $stmtCustom->execute();
         $id_bouquet = $stmtCustom->insert_id; 
@@ -162,14 +203,12 @@ try {
        6. DETAIL PESANAN & POTONG STOK OTOMATIS
     ===================================================== */
     foreach ($detailData as $p) {
-        // Insert Detail
         $sqlDetail = "INSERT INTO detail_pesanan (id_pesanan, id_produk, jumlah, harga, subtotal) VALUES (?, ?, ?, ?, ?)";
         $stmtDetail = $koneksi->prepare($sqlDetail);
         $stmtDetail->bind_param("iiiii", $id_pesanan, $p['id'], $p['qty'], $p['harga'], $p['subtotal']);
         $stmtDetail->execute();
         $stmtDetail->close();
 
-        // Update / Potong Stok Gudang
         $sqlUpdateStok = "UPDATE produk SET stok = stok - ? WHERE id_produk = ?";
         $stmtStok = $koneksi->prepare($sqlUpdateStok);
         $stmtStok->bind_param("ii", $p['qty'], $p['id']);
@@ -252,6 +291,19 @@ try {
                         <div class="col-7 fw-medium text-dark text-end">
                             <span class="badge bg-white text-dark border px-2 py-1"><?php echo htmlspecialchars($pembayaran ?: 'Transfer Bank'); ?></span>
                         </div>
+
+                        <div class="col-5 text-muted">Total Komponen</div>
+                        <div class="col-7 fw-medium text-dark text-end">Rp <?php echo number_format($total_produk, 0, ',', '.'); ?></div>
+
+                        <div class="col-5 text-muted">Ongkos Rakit Buket</div>
+                        <div class="col-7 fw-medium text-danger-emphasis text-end">+ Rp <?php echo number_format($ongkos_rakit, 0, ',', '.'); ?></div>
+                        
+                        <?php if ($potongan_voucher > 0): ?>
+                        <div class="col-5 text-success fw-medium">Potongan Voucher</div>
+                        <div class="col-7 fw-bold text-success text-end">- Rp <?php echo number_format($potongan_voucher, 0, ',', '.'); ?></div>
+                        <?php endif; ?>
+
+                        <hr class="text-muted opacity-25 my-1">
                         
                         <div class="col-5 text-muted align-self-center">Total Pembayaran</div>
                         <div class="col-7 fw-bold text-end fs-5" style="color: #8d4f5c;">Rp <?php echo number_format($total, 0, ',', '.'); ?></div>
