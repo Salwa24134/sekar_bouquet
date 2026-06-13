@@ -5,7 +5,6 @@ if (session_status() === PHP_SESSION_NONE) {
 
 include 'koneksi.php';
 
-// Menyesuaikan key session dengan halaman proses_pesanan (id_pelanggan / id_user / id)
 $id_user = $_SESSION['id_pelanggan'] ?? $_SESSION['id_user'] ?? $_SESSION['id'] ?? null;
 
 if (!$id_user) {
@@ -32,202 +31,136 @@ $result = $stmt->get_result();
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
     <style>
-        body {
-            background: #fff5f7;
-            font-family: 'Poppins', sans-serif; /* Perbaikan font fallback */
-        }
+        body { background: #fff8f9; font-family: 'Poppins', sans-serif; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 25px; }
+        .card-order { background: #fff; border: none; border-radius: 20px; box-shadow: 0 10px 30px rgba(183, 110, 121, 0.05); overflow: hidden; transition: all 0.3s ease; display: flex; flex-column: normal; flex-direction: column; justify-content: space-between; }
+        .card-order:hover { transform: translateY(-5px); box-shadow: 0 15px 35px rgba(183, 110, 121, 0.12); }
+        .header-img { width: 100%; height: 160px; object-fit: cover; }
+        .content { padding: 22px; font-size: 13px; flex-grow: 1; display: flex; flex-direction: column; }
+        .badge { font-size: 11px; padding: 6px 12px; border-radius: 30px; font-weight: 600; text-transform: capitalize; }
+        
+        /* Tema Warna Status Pastel */
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-diproses { background: #e0f0ff; color: #004085; }
+        .status-selesai { background: #d4edda; color: #155724; }
+        .status-dibatalkan { background: #f8d7da; color: #721c24; }
 
-        /* GRID */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-        }
-
-        /* CARD */
-        .card-order {
-            background: #fff;
-            border: none;
-            border-radius: 18px;
-            box-shadow: 0 10px 25px rgba(183, 110, 121, 0.08);
-            overflow: hidden;
-            transition: transform 0.3s ease;
-        }
-        .card-order:hover {
-            transform: translateY(-5px);
-        }
-
-        /* IMAGE */
-        .header-img {
-            width: 100%;
-            height: 140px;
-            object-fit: cover;
-        }
-
-        /* CONTENT */
-        .content {
-            padding: 20px;
-            font-size: 13px;
-        }
-
-        .badge {
-            font-size: 11px;
-            padding: 6px 10px;
-            border-radius: 8px;
-            font-weight: 500;
-        }
-
-        .pending { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-        .proses { background: #cce5ff; color: #004085; border: 1px solid #b8daff; }
-        .selesai { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .dibatalkan { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-
-        /* PRODUCT */
-        .product-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 13px;
-            margin-bottom: 10px;
-        }
-
-        .product-img {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            object-fit: cover;
-            border: 1px solid #eee;
-        }
-
-        .small-text {
-            font-size: 12px;
-            color: #777;
-        }
-
-        /* BUTTON FIX */
-        .btn-small {
-            font-size: 13px;
-            border-radius: 10px;
-            padding: 8px 12px;
-        }
-        .btn-custom-pink {
-            background: #b76e79;
-            color: white;
-            border: none;
-        }
-        .btn-custom-pink:hover {
-            background: #a35c67;
-            color: white;
-        }
+        .product-item { display: flex; align-items: center; gap: 12px; font-size: 13px; margin-bottom: 12px; background: #fffafb; padding: 8px; border-radius: 12px; border: 1px solid #fff0f2; }
+        .product-img { width: 45px; height: 45px; border-radius: 10px; object-fit: cover; }
+        .small-text { font-size: 12px; color: #8a7678; }
+        .btn-custom-pink { background: linear-gradient(135deg, #d88b9c, #b76e79); color: white; border: none; border-radius: 12px; padding: 10px; font-weight: 500; font-size: 13px; width: 100%; display: block; text-align: center; text-decoration: none; transition: 0.3s; }
+        .btn-custom-pink:hover { color: white; opacity: 0.9; transform: translateY(-1px); }
     </style>
 </head>
-
 <body>
 
 <?php include 'layout/header.php'; ?>
 
-<div class="container py-5">
-
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="mb-0 fw-bold text-dark" style="font-family: 'Playfair Display', serif;">Riwayat Pesanan 🌸</h4>
-        <a href="index.php" class="btn btn-outline-secondary btn-sm btn-small">
-            <i class="fa fa-arrow-left me-1"></i> Beranda
+<div class="container py-5" style="min-height: 80vh;">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <h3 class="mb-0 fw-bold text-dark" style="font-family: 'Playfair Display', serif; color: #8d4f5c !important;">Riwayat Pesanan Anda 🌸</h3>
+        <a href="index.php" class="btn btn-outline-secondary btn-sm px-3 py-2" style="border-radius: 10px;">
+            <i class="fa fa-arrow-left me-1"></i> Kembali Belanja
         </a>
     </div>
 
-    <div class="grid">
+    <?php if($result->num_rows === 0): ?>
+        <div class="text-center py-5">
+            <i class="fa-solid fa-basket-shopping text-muted mb-3" style="font-size: 3.5rem; opacity: 0.4;"></i>
+            <p class="text-muted">Belum ada riwayat transaksi yang tercatat.</p>
+        </div>
+    <?php else: ?>
+        <div class="grid">
+        <?php while($row = $result->fetch_assoc()): ?>
+            <?php
+                $id = $row['id_pesanan'];
+                $status_db = trim($row['status']);
+                
+                // Normalisasi penentuan class badge CSS dinamis berdasarkan status di database
+                $badge_class = "status-pending"; 
+                if (strcasecmp($status_db, 'selesai') == 0) {
+                    $badge_class = "status-selesai";
+                } elseif (strcasecmp($status_db, 'diproses') == 0) {
+                    $badge_class = "status-diproses";
+                } elseif (strcasecmp($status_db, 'dibatalkan') == 0) {
+                    $badge_class = "status-dibatalkan";
+                }
 
-    <?php while($row = $result->fetch_assoc()): ?>
-    <?php
-        $id = $row['id_pesanan'];
-        $status = strtolower(trim($row['status']));
+                // Query mengambil item pertama sebagai wajah/banner utama card
+                $q_first = $koneksi->prepare("SELECT pr.gambar FROM detail_pesanan dp JOIN produk pr ON pr.id_produk = dp.id_produk WHERE dp.id_pesanan = ? LIMIT 1");
+                $q_first->bind_param("i", $id);
+                $q_first->execute();
+                $first = $q_first->get_result()->fetch_assoc();
+                $q_first->close();
+            ?>
 
-        // Penentuan kelas badge warna yang lebih estetik pastel
-        if ($status == 'selesai') {
-            $badge = "selesai";
-        } elseif ($status == 'diproses') {
-            $badge = "proses";
-        } elseif ($status == 'dibatalkan') {
-            $badge = "dibatalkan";
-        } else {
-            $badge = "pending";
-        }
+            <div class="card-order">
+                <?php if(!empty($first['gambar'])): ?>
+                    <img src="assets/gambar/<?= htmlspecialchars($first['gambar']); ?>" class="header-img">
+                <?php else: ?>
+                    <div class="bg-secondary-subtle header-img d-flex align-items-center justify-content-center">
+                        <i class="fa fa-image text-muted fs-3"></i>
+                    </div>
+                <?php endif; ?>
 
-        // Ambil data produk pertama sebagai gambar banner card
-        $produk = $koneksi->query("
-            SELECT pr.nama_produk, pr.gambar, dp.jumlah
-            FROM detail_pesanan dp
-            JOIN produk pr ON pr.id_produk = dp.id_produk
-            WHERE dp.id_pesanan = $id LIMIT 1
-        ");
-        $first = $produk->fetch_assoc();
-    ?>
+                <div class="content">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold text-dark fs-6">Nota #<?= $id; ?></span>
+                        <span class="badge <?= $badge_class; ?>"><?= htmlspecialchars($status_db); ?></span>
+                    </div>
 
-        <div class="card-order">
-            <?php if(!empty($first['gambar'])): ?>
-                <img src="assets/gambar/<?= $first['gambar']; ?>" class="header-img">
-            <?php else: ?>
-                <div class="bg-secondary-subtle header-img d-flex align-items-center justify-content-center">
-                    <i class="fa fa-image text-muted fs-3"></i>
-                </div>
-            <?php endif; ?>
+                    <div class="small-text mb-3">
+                        <i class="fa fa-calendar-alt me-1"></i> <?= date('d M Y, H:i', strtotime($row['tanggal'])); ?>
+                    </div>
 
-            <div class="content">
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-dark fs-6">#<?= $id; ?></span>
-                    <span class="badge <?= $badge; ?>"><?= $row['status']; ?></span>
-                </div>
+                    <hr class="my-2 opacity-25">
+                    <div class="product-list-scroll mb-3" style="max-height: 160px; overflow-y: auto;">
+                        <?php
+                        $q_items = $koneksi->prepare("SELECT pr.nama_produk, pr.gambar, dp.jumlah FROM detail_pesanan dp JOIN produk pr ON pr.id_produk = dp.id_produk WHERE dp.id_pesanan = ?");
+                        $q_items->bind_param("i", $id);
+                        $q_items->execute();
+                        $res_items = $q_items->get_result();
+                        while($p = $res_items->fetch_assoc()):
+                        ?>
+                            <div class="product-item">
+                                <img src="assets/gambar/<?= htmlspecialchars($p['gambar']); ?>" class="product-img">
+                                <div class="flex-grow-1">
+                                    <div class="fw-medium text-dark text-truncate" style="max-width: 180px;"><?= htmlspecialchars($p['nama_produk']); ?></div>
+                                    <div class="small-text">Jumlah: <?= $p['jumlah']; ?>x</div>
+                                </div>
+                            </div>
+                        <?php endwhile; $q_items->close(); ?>
+                    </div>
 
-                <div class="small-text mt-1">
-                    <i class="fa fa-calendar-alt me-1"></i> <?= date('d M Y, H:i', strtotime($row['tanggal'])); ?>
-                </div>
+                    <div class="mt-auto">
+                        <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                            <span class="text-muted small">Total Tagihan:</span>
+                            <span class="fw-bold fs-6" style="color: #8d4f5c;">Rp <?= number_format($row['total'], 0, ',', '.'); ?></span>
+                        </div>
 
-                <hr class="my-3 opacity-25">
-
-                <?php
-                $produk2 = $koneksi->query("
-                    SELECT pr.nama_produk, pr.gambar, dp.jumlah
-                    FROM detail_pesanan dp
-                    JOIN produk pr ON pr.id_produk = dp.id_produk
-                    WHERE dp.id_pesanan = $id
-                ");
-                while($p = $produk2->fetch_assoc()):
-                ?>
-                    <div class="product-item">
-                        <img src="assets/gambar/<?= $p['gambar']; ?>" class="product-img">
-                        <div class="flex-grow-1">
-                            <div class="fw-medium text-dark"><?= $p['nama_produk']; ?></div>
-                            <div class="small-text">x<?= $p['jumlah']; ?></div>
+                        <div class="mt-3">
+                            <?php if(strcasecmp($status_db, 'selesai') == 0): ?>
+                                <a href="nota.php?id=<?= $id; ?>" class="btn btn-success btn-sm w-100 py-2" style="border-radius: 12px; font-weight: 500;">
+                                    <i class="fa fa-print me-1"></i> Cetak Nota Pembelian
+                                </a>
+                            <?php elseif(strcasecmp($status_db, 'dibatalkan') == 0): ?>
+                                <button class="btn btn-light btn-sm w-100 py-2 border text-muted" style="border-radius: 12px;" disabled>Pesanan Dibatalkan</button>
+                            <?php elseif(strcasecmp($status_db, 'diproses') == 0): ?>
+                                <div class="alert alert-info py-2 px-3 m-0 small text-center" style="border-radius: 12px; font-size: 12px;">
+                                    <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Buket sedang dirangkai tim
+                                </div>
+                            <?php else: ?>
+                                <div class="alert alert-warning py-2 px-3 m-0 small text-center" style="border-radius: 12px; font-size: 12px;">
+                                    <i class="fa fa-hourglass-half me-1"></i> Menunggu Konfirmasi Pembayaran
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
-                <?php endwhile; ?>
-
-                <hr class="my-3 opacity-25">
-
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="text-muted">Total Belanja:</span>
-                    <span class="fw-bold fs-6 text-dark">Rp <?= number_format($row['total'],0,',','.'); ?></span>
-                </div>
-
-                <div class="mt-3">
-                    <?php if($status == 'selesai'): ?>
-                        <a href="nota.php?id=<?= $id; ?>" class="btn btn-success btn-sm w-100 btn-small d-flex align-items-center justify-content-center gap-1">
-                            <i class="fa fa-print"></i> Cetak Nota Resmi
-                        </a>
-                    <?php elseif($status == 'dibatalkan'): ?>
-                        <button class="btn btn-secondary btn-sm w-100 btn-small" disabled>Pesanan Hangus</button>
-                    <?php else: ?>
-                        <div class="alert alert-warning py-2 px-3 m-0 small text-center rounded-3">
-                            <i class="fa fa-hourglass-half me-1"></i> Menunggu Verifikasi Admin
-                        </div>
-                    <?php endif; ?>
                 </div>
             </div>
+        <?php endwhile; ?>
         </div>
-
-    <?php endwhile; ?>
-
-    </div>
+    <?php endif; ?>
 </div>
 
 <?php include 'layout/footer.php'; ?>

@@ -175,7 +175,7 @@ body{
     <div class="header">
         <h2>SEKAR BOUQUET</h2>
         <small>Buket Bunga Premium & Custom</small><br>
-        <small>Jl. Mawar No. 12, Surabaya</small>
+        <small>Jl. Raya Telang No. 45 (Depan Gerbang Utama UTM) Desa Telang, Kec. Kamal, Kab. Bangkalan, Madura, Jawa Timur</small>
     </div>
 
     <!-- INFO -->

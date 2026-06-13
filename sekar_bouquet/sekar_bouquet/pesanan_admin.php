@@ -281,7 +281,7 @@ if ($data === false) {
 
                     <div class="modal-body text-center">
                         <?php if (!empty($b['bukti'])) { ?>
-                            <img src="assets/gambar/<?= htmlspecialchars($b['bukti']) ?>" class="img-fluid rounded">
+                            <img src="assets/bukti/<?= htmlspecialchars($b['bukti']) ?>" class="img-fluid rounded">
                         <?php } else { ?>
                             <p class="text-muted">Tidak ada bukti</p>
                         <?php } ?>

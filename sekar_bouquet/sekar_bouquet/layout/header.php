@@ -44,35 +44,43 @@ include 'koneksi.php';
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <ul class="navbar-nav mx-auto align-items-center">
+        <div class="collapse navbar-collapse" id="nav">
+            <ul class="navbar-nav mx-auto align-items-center">
                 <li class="nav-item">
                     <a class="nav-link text-white" href="index.php">
                         <i class="fa fa-house me-1"></i> Beranda
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link text-white" href="produk.php">
-                        <i class="fa fa-seedling me-1"></i> Bouquet
-                    </a>
-                </li>
+
+                <?php if (isset($_SESSION['username'])): ?>
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="produk.php">
+                            <i class="fa fa-seedling me-1"></i> Bouquet
+                        </a>
+                    </li>
+                <?php endif; ?>
+
                 <li class="nav-item">
                     <a class="nav-link text-white" href="tentang.php">
                         <i class="fa fa-heart me-1"></i> Tentang
                     </a>
                 </li>
-                <li class="nav-item">
-                    <?php 
-                    $total_jenis_item = isset($_SESSION['keranjang']) ? count($_SESSION['keranjang']) : 0;
-                    ?>
-                    <a class="nav-link text-white position-relative px-2" href="keranjang.php" title="Lihat Keranjang Racikan">
-                        <i class="fa fa-shopping-basket fs-5"></i>  Keranjang
-                        <?php if ($total_jenis_item > 0): ?>
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="font-size: 0.65rem; padding: 0.25em 0.5em;">
-                                <?= $total_jenis_item; ?>
-                            </span>
-                        <?php endif; ?>
-                    </a>
-                </li>
+
+                <?php if (isset($_SESSION['username'])): ?>
+                    <li class="nav-item">
+                        <?php 
+                        $total_jenis_item = isset($_SESSION['keranjang']) ? count($_SESSION['keranjang']) : 0;
+                        ?>
+                        <a class="nav-link text-white position-relative px-2" href="keranjang.php" title="Lihat Keranjang Racikan">
+                            <i class="fa fa-shopping-basket fs-5"></i>  Keranjang
+                            <?php if ($total_jenis_item > 0): ?>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light" style="font-size: 0.65rem; padding: 0.25em 0.5em;">
+                                    <?= $total_jenis_item; ?>
+                                </span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+                <?php endif; ?>
             </ul>
 
             <ul class="navbar-nav ms-auto align-items-center">
