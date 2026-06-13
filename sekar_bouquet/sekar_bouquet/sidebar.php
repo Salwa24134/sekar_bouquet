@@ -8,5 +8,6 @@
     <a href="laporan_admin.php"><i class="fa fa-wallet me-2"></i> Laporan Keuangan</a>
     <a href="pembelian_supplier.php"><i class="fa fa-wallet me-2"></i> Pembelian Supplier</a>
     <a href="barang_rusak.php"><i class="fa fa-trash-can me-2"></i> Bunga Rusak/Layu</a>
+    <a href="voucher.php"><i class="fa fa-gift me-2"></i> Audit Voucher (Cursor)</a>
     <a href="logout.php"><i class="fa fa-sign-out-alt me-2"></i> Logout</a>
 </div>

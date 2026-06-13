@@ -1,7 +1,29 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 include 'koneksi.php';
 include 'layout/header.php';
+
+/* ==========================================================================
+   ENGINE SINKRONISASI CURSOR: AMBIL DATA VOUCHER KHUSUS USER YANG SEDANG LOGIN
+   ========================================================================== */
+$data_voucher = null;
+if (isset($_SESSION['id_pelanggan'])) {
+    $id_user_login = $_SESSION['id_pelanggan'];
+    
+    // Query memeriksa apakah user ini mendapatkan voucher aktif hasil olahan Cursor
+    $query_voucher = $koneksi->prepare("
+        SELECT * FROM voucher_pelanggan 
+        WHERE id_pelanggan = ? AND status_aktif = 'Aktif'
+        ORDER BY id_voucher DESC LIMIT 1
+    ");
+    $query_voucher->bind_param("i", $id_user_login);
+    $query_voucher->execute();
+    $result_voucher = $query_voucher->get_result();
+    $data_voucher = $result_voucher->fetch_assoc();
+    $query_voucher->close();
+}
 ?>
 
 <!DOCTYPE html>
@@ -24,7 +46,7 @@ include 'layout/header.php';
 
         h1, h2, h3 {
             font-family: 'Playfair Display', serif;
-            color: #8d4f5c; /* Menyamakan warna judul utama */
+            color: #8d4f5c; 
         }
 
         .btn-main {
@@ -43,7 +65,7 @@ include 'layout/header.php';
             background: white;
             border: none;
             border-radius: 16px;
-            box-shadow: 0 5px 15px rgba(183, 110, 121, 0.05);
+            box-shadow: 0 5px 15 rgba(183, 110, 121, 0.05);
         }
 
         .product-card {
@@ -62,6 +84,15 @@ include 'layout/header.php';
         footer {
             background: #b76e79;
         }
+        
+        /* STYLE KHUSUS BANNER KADO VOUCHER REWARD DARI CURSOR */
+        .voucher-box-dashed {
+            border: 2px dashed #b76e79; 
+            border-radius: 12px;
+            background: #ffffff;
+            display: inline-block;
+            padding: 10px 30px;
+        }
     </style>
 </head>
 
@@ -78,6 +109,31 @@ include 'layout/header.php';
         </a>
     </div>
 </div>
+
+<?php if (!empty($data_voucher)): ?>
+<div class="container mt-5">
+    <div class="card border-0 shadow-sm mx-auto" style="background: linear-gradient(135deg, #fce4ec, #f8bbd0); border-radius: 20px; max-width: 850px;">
+        <div class="card-body p-4 p-md-5 text-center position-relative overflow-hidden">
+            <i class="fa fa-gift position-absolute text-white opacity-25" style="font-size: 10rem; bottom: -20px; right: -20px;"></i>
+            
+            <h3 class="fw-bold mb-1" style="color: #8d4f5c; font-family: 'Playfair Display', serif;">
+                🎉 Kejutan Spesial Untukmu Bulan Ini!
+            </h3>
+            <p class="text-muted mb-4 small">Kamu terdeteksi sebagai Pelanggan Loyal Sekar Bouquet. Ini reward kupon belanja kustom eksklusif untukmu:</p>
+            
+            <div class="voucher-box-dashed mb-3 shadow-sm">
+                <span class="small text-muted d-block text-uppercase fw-bold tracking-wider" style="font-size: 0.75rem; letter-spacing: 1px;">KODE VOUCHER REWARD (10%)</span>
+                <code style="font-size: 1.6rem; color: #b76e79; font-weight: 700; font-family: 'Poppins', sans-serif;"><?= htmlspecialchars($data_voucher['kode_voucher']); ?></code>
+            </div>
+            
+            <h4 class="fw-bold text-success mb-2">
+                Potongan Langsung: Rp <?= number_format($data_voucher['potongan_harga'], 0, ',', '.'); ?>
+            </h4>
+            <p class="text-muted small mb-0">*Salin kode unik di atas dan tunjukkan ke kasir/admin pada transaksi pembelianmu berikutnya.</p>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <div class="container my-5">
     <div class="row text-center g-4">

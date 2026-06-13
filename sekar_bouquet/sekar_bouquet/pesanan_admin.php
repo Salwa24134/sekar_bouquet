@@ -70,7 +70,7 @@ if ($data === false) {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
-    <style>
+<style>
         body { 
             font-family: 'Poppins', sans-serif; 
             background: #fff4f7; 
@@ -82,7 +82,7 @@ if ($data === false) {
             color: #b76e79; 
         }
 
-        /* --- STYLE SIDEBAR SINKRON (SAMA RATA) --- */
+        /* --- STYLE SIDEBAR SINKRON (SAMA RATA) + SCROLLABLE --- */
         .sidebar {
             width: 260px;
             height: 100vh;
@@ -93,7 +93,26 @@ if ($data === false) {
             padding: 30px 24px;
             color: white;
             z-index: 1000;
+            
+            /* FIX 1: Mengaktifkan scroll vertikal jika menu meluber melebihi tinggi layar */
+            overflow-y: auto; 
         }
+
+        /* FIX 2: Modifikasi Kustom Desain Batang Scrollbar Sidebar Agar Cantik & Elegan */
+        .sidebar::-webkit-scrollbar {
+            width: 6px; /* Ketebalan scrollbar tipis minimalis */
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05); /* Latar belakang track transparan */
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.25); /* Warna pill scrollbar putih transparan masi senada */
+            border-radius: 10px;
+        }
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.45); /* Warna sedikit lebih terang saat disorot */
+        }
+
         .sidebar h3 {
             color: white !important;
             font-size: 1.5rem;

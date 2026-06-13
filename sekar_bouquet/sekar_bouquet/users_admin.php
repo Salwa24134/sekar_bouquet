@@ -71,18 +71,34 @@ $resultData = $koneksi->query($sql);
             color: #b76e79; 
         }
 
-        /* --- STYLE SIDEBAR SINKRON (SAMA RATA) --- */
+        /* --- STYLE SIDEBAR SINKRON (SAMA RATA) + SCROLLABLE --- */
         .sidebar {
             width: 260px;
             height: 100vh;
-            background: #b26a7a; /* Warna mauve/pink gelap sesuai gambar */
+            background: #b26a7a; 
             position: fixed;
             top: 0;
             left: 0;
             padding: 30px 24px;
             color: white;
             z-index: 1000;
+            overflow-y: auto; 
         }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px; 
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05); 
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.25); 
+            border-radius: 10px;
+        }
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.45); 
+        }
+
         .sidebar h3 {
             color: white !important;
             font-size: 1.5rem;
@@ -119,17 +135,7 @@ $resultData = $koneksi->query($sql);
             border: none; 
             border-radius: 18px; 
             box-shadow: 0 10px 25px rgba(183,110,121,0.08); 
-        }
-        .btn-main { 
-            background: linear-gradient(135deg, #d88b9c, #b76e79); 
-            color: white; 
-            border: none; 
-            border-radius: 12px;
-            padding: 10px 20px;
-        }
-        .btn-main:hover { 
-            color: white; 
-            opacity: 0.9; 
+            background: white;
         }
         .table-responsive {
             background: white;
@@ -137,27 +143,30 @@ $resultData = $koneksi->query($sql);
             padding: 10px;
         }
 
-        /* --- PERBAIKAN UKURAN FOTO PROFIL (FIX) --- */
+        /* --- FIX FIX: STYLE FOTO PROFILE AVATAR YANG RUSAK --- */
         .user-avatar {
             width: 45px;
             height: 45px;
-            object-fit: cover;
             border-radius: 50%;
-            border: 2px solid #f1c9d2;
+            object-fit: cover;
+            border: 2px solid #e8b4bc;
+            box-shadow: 0 4px 8px rgba(183,110,121,0.15);
         }
 
-        /* --- BADGE ROLE --- */
+        /* STYLE CUSTOM BADGE STATUS WARNA MAUVE MATCHING */
         .badge-admin {
-            background-color: #b76e79;
+            background-color: #b76e79 !important;
             color: white;
             padding: 6px 12px;
             border-radius: 8px;
+            font-weight: 500;
         }
         .badge-user {
-            background-color: #0d6efd;
-            color: white;
+            background-color: #e8b4bc !important;
+            color: #5c3a40;
             padding: 6px 12px;
             border-radius: 8px;
+            font-weight: 500;
         }
     </style>
 </head>
@@ -191,8 +200,16 @@ $resultData = $koneksi->query($sql);
                 ?>
                         <tr>
                             <td>
-                                <img src="assets/foto/<?= !empty($row['foto']) ? htmlspecialchars($row['foto']) : 'default.png'; ?>"
-                                     class="user-avatar" alt="Avatar">
+                                <?php 
+                                $foto_path = 'assets/foto/' . $row['foto'];
+                                if (!empty($row['foto']) && file_exists($foto_path)) {
+                                    $gambar_tampil = $foto_path;
+                                } else {
+                                    // Menggunakan gambar placeholder avatar bawaan jika file tidak ada di folder
+                                    $gambar_tampil = 'https://cdn-icons-png.flaticon.com/512/3135/3135715.png';
+                                }
+                                ?>
+                                <img src="<?= $gambar_tampil; ?>" class="user-avatar" alt="Avatar">
                             </td>
 
                             <td><b><?= htmlspecialchars($row['username']); ?></b></td>
@@ -211,11 +228,12 @@ $resultData = $koneksi->query($sql);
                                 <?php if ($row['role'] != 'admin') { ?>
                                     <a href="?delete=<?= urlencode($row['id']); ?>"
                                        class="btn btn-sm btn-danger"
+                                       style="border-radius: 8px;"
                                        onclick="return confirm('Hapus user ini?')">
-                                        Hapus
+                                        <i class="fa fa-trash me-1"></i> Hapus
                                     </a>
                                 <?php } else { ?>
-                                    <span class="text-muted">Protected</span>
+                                    <span class="badge bg-light text-muted p-2" style="border-radius: 8px;"><i class="fa fa-lock me-1"></i> Protected</span>
                                 <?php } ?>
                             </td>
                         </tr>
