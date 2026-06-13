@@ -93,14 +93,50 @@ if ($file && $file['error'] == 0) {
     move_uploaded_file($file['tmp_name'], $folder . $buktiName);
 }
 
+
 /* =====================================================
    3. INSERT KE TABEL UTAMA (pesanan) -> FIXED SESUAI STRUKTUR KAMU
 ===================================================== */
 // Kolom pas dari phpMyAdmin kamu: id_pelanggan, tanggal, total, status, metode_pembayaran, bukti
 $sqlInsert = "
-    INSERT INTO `pesanan` (id_pelanggan, tanggal, total, status, metode_pembayaran, bukti)
-    VALUES (?, NOW(), ?, 'Menunggu Verifikasi', ?, ?)
+INSERT INTO pesanan
+(id_pelanggan, tanggal, total, status, metode_pembayaran, bukti)
+VALUES
+(?, NOW(), ?, 'Menunggu Pembayaran', ?, ?)
 ";
+
+$cekPelanggan = $koneksi->prepare(
+    "SELECT id_pelanggan
+     FROM pelanggan
+     WHERE id_pelanggan=?"
+);
+
+$cekPelanggan->bind_param("i", $id_pelanggan);
+$cekPelanggan->execute();
+
+$resCek = $cekPelanggan->get_result();
+
+if ($resCek->num_rows == 0) {
+
+    $username = $_SESSION['username'];
+
+    $stmtTambah = $koneksi->prepare(
+        "INSERT INTO pelanggan
+        (id_pelanggan,nama,email,telepon,alamat)
+        VALUES (?, ?, '', '', '')"
+    );
+
+    $stmtTambah->bind_param(
+        "is",
+        $id_pelanggan,
+        $username
+    );
+
+    $stmtTambah->execute();
+    $stmtTambah->close();
+}
+
+$cekPelanggan->close();
 
 $stmtHeader = $koneksi->prepare($sqlInsert);
 
@@ -110,11 +146,27 @@ if (!$stmtHeader) {
 
 // "iiss" artinya: int (id_pelanggan), int (total), string (pembayaran), string (buktiName)
 $stmtHeader->bind_param("iiss", $id_pelanggan, $total, $pembayaran, $buktiName);
-$stmtHeader->execute();
 
-// Mengambil id_pesanan yang baru saja terbuat otomatis
-$id_pesanan = $koneksi->insert_id; 
+
+if (!$stmtHeader->execute()) {
+    die(
+        "Gagal simpan pesanan : "
+        . $stmtHeader->error
+    );
+}
+
+$id_pesanan = $koneksi->insert_id;
 $stmtHeader->close();
+
+/* =========================
+   ANTI DOUBLE ORDER (WAJIB)
+========================= */
+if (isset($_SESSION['last_order_id']) && $_SESSION['last_order_id'] == $id_pesanan) {
+    header("Location: riwayat_pesanan.php");
+    exit();
+}
+
+$_SESSION['last_order_id'] = $id_pesanan;
 
 /* =====================================================
    4. INSERT KE DETAIL (detail_pesanan) -> FIXED SESUAI STRUKTUR KAMU
@@ -147,6 +199,11 @@ if ($id_pesanan > 0) {
 } else {
     die("Gagal mendapatkan ID Utama transaksi.");
 }
+
+if (!isset($id_pesanan)) {
+    header("Location: produk.php");
+    exit();
+}
 ?>
 
 <!DOCTYPE html>
@@ -172,8 +229,15 @@ if ($id_pesanan > 0) {
             <p class="mb-0"><b>Total Transfer:</b> Rp <?php echo number_format($total, 0, ',', '.'); ?></p>
         </div>
 
-        <a href="cetak_pdf.php?id=<?php echo (int)$id_pesanan; ?>" class="btn btn-primary btn-lg w-100 mb-3" style="border-radius: 12px;">
-            Download Nota (PDF)
+        <div class="alert alert-warning">
+            <strong>Menunggu Verifikasi Admin</strong><br>
+            Bukti pembayaran Anda sedang diperiksa.
+            Nota dapat dicetak setelah pembayaran diverifikasi admin.
+        </div>
+
+        <a href="riwayat_pesanan.php"
+        class="btn btn-primary btn-lg w-100 mb-3">
+            lihat riwayat pesanan
         </a>
         <a href="index.php" class="btn btn-outline-secondary w-100" style="border-radius: 12px;">
             Kembali ke Beranda

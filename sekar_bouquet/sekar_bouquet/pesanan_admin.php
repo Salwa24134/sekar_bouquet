@@ -17,14 +17,17 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] != 'admin') {
 ========================= */
 if (isset($_GET['status']) && isset($_GET['id'])) {
 
-    $id = (int)$_GET['id']; // Casting ke int untuk keamanan tambahan
+    $id = (int) $_GET['id'];
     $status = $_GET['status'];
 
-    // Perbaikan: pesanan_header -> pesanan, id -> id_pesanan
-    $stmtUpdate = $koneksi->prepare("UPDATE pesanan SET status = ? WHERE id_pesanan = ?");
-    $stmtUpdate->bind_param("si", $status, $id);
-    $stmtUpdate->execute();
-    $stmtUpdate->close();
+    // paksa status hanya 3 ini (biar konsisten)
+    if ($status == 'Pending' || $status == 'Diproses' || $status == 'Selesai') {
+
+        $stmt = $koneksi->prepare("UPDATE pesanan SET status = ? WHERE id_pesanan = ?");
+        $stmt->bind_param("si", $status, $id);
+        $stmt->execute();
+        $stmt->close();
+    }
 
     header("Location: pesanan_admin.php");
     exit();
@@ -41,7 +44,8 @@ $sql = "
         pl.email, 
         p.metode_pembayaran, 
         p.total, 
-        p.status
+        p.status,
+        p.bukti
     FROM pesanan p
     JOIN pelanggan pl ON p.id_pelanggan = pl.id_pelanggan
     ORDER BY p.id_pesanan DESC
@@ -163,7 +167,7 @@ if ($data === false) {
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Nama Pelanggan</th>
+                    <th>Nama Pelanggan dan Pesanan</th>
                     <th>Email</th>
                     <th>Metode Pembayaran</th>
                     <th>Total</th>
@@ -178,10 +182,33 @@ if ($data === false) {
                 ?>
                 <tr>
                     <td>#<?= htmlspecialchars($row['id_pesanan']) ?></td>
-                    <td><?= htmlspecialchars($row['nama']) ?></td>
+                    <td>
+                        <?= htmlspecialchars($row['nama']) ?>
+
+                        <div class="text-muted small">
+                            <?php
+                            $id = $row['id_pesanan'];
+
+                            $produk = $koneksi->query("
+                                SELECT pr.nama_produk, dp.jumlah
+                                FROM detail_pesanan dp
+                                JOIN produk pr ON pr.id_produk = dp.id_produk
+                                WHERE dp.id_pesanan = $id
+                            ");
+
+                            while($p = $produk->fetch_assoc()){
+                                echo "• ".$p['nama_produk']." x".$p['jumlah']."<br>";
+                            }
+                            ?>
+                        </div>
+                    </td>
                     <td><?= htmlspecialchars($row['email']) ?></td>
                     <td><?= htmlspecialchars($row['metode_pembayaran'] ?? '-') ?></td>
-                    <td>Rp <?= number_format($row['total'], 0, ',', '.') ?></td>
+                    <td>Rp <?= number_format($row['total'], 0, ',', '.') ?>
+                <br>
+                <button class="btn btn-sm btn-dark mt-1" data-bs-toggle="modal" data-bs-target="#bukti<?= $row['id_pesanan'] ?>">
+                    Lihat Bukti
+                </button></td>
                     <td>
                         <?php if ($row['status'] == 'Menunggu Verifikasi' || $row['status'] == 'Pending') { ?>
                             <span class="badge badge-wait"><?= htmlspecialchars($row['status']) ?></span>
@@ -192,17 +219,21 @@ if ($data === false) {
                         <?php } ?>
                     </td>
                     <td>
-                        <a href="?id=<?= $row['id_pesanan'] ?>&status=Pending"
-                           class="btn btn-sm btn-warning mb-1">
-                           Pending
+                        <a href="?id=<?= $row['id_pesanan'] ?>&status=Pending" class="btn btn-sm btn-warning">
+                        Pending
                         </a>
-                        <a href="?id=<?= $row['id_pesanan'] ?>&status=Diproses"
-                           class="btn btn-sm btn-primary mb-1">
-                           Proses
+
+                        <a href="?id=<?= $row['id_pesanan'] ?>&status=Diproses" class="btn btn-sm btn-primary">
+                        Proses
                         </a>
-                        <a href="?id=<?= $row['id_pesanan'] ?>&status=Selesai"
-                           class="btn btn-sm btn-success mb-1">
-                           Selesai
+
+                        <a href="?id=<?= $row['id_pesanan'] ?>&status=Selesai" class="btn btn-sm btn-success">
+                        Selesai
+                        </a>
+                        <a href="hapus_pesanan.php?id_pesanan=<?= $row['id_pesanan']; ?>"
+                            onclick="return confirm('Yakin ingin menghapus pesanan ini? Data tidak bisa dikembalikan!')"
+                            class="btn btn-sm btn-danger">
+                            Hapus
                         </a>
                     </td>
                 </tr>
@@ -214,6 +245,32 @@ if ($data === false) {
                     <td colspan="7" class="text-center text-muted py-3">Belum ada pesanan masuk.</td>
                 </tr>
                 <?php endif; ?>
+
+                <?php
+                $data->data_seek(0);
+                while ($b = $data->fetch_assoc()) {
+                ?>
+                <div class="modal fade" id="bukti<?= $b['id_pesanan'] ?>" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Bukti Pembayaran #<?= $b['id_pesanan'] ?></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+
+                    <div class="modal-body text-center">
+                        <?php if (!empty($b['bukti'])) { ?>
+                            <img src="assets/gambar/<?= htmlspecialchars($b['bukti']) ?>" class="img-fluid rounded">
+                        <?php } else { ?>
+                            <p class="text-muted">Tidak ada bukti</p>
+                        <?php } ?>
+                    </div>
+
+                    </div>
+                </div>
+                </div>
+                <?php } ?>
             </tbody>
         </table>
     </div>

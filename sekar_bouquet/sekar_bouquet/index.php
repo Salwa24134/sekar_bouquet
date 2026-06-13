@@ -1,8 +1,7 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+session_start();
 include 'koneksi.php';
+include 'layout/header.php';
 ?>
 
 <!DOCTYPE html>
@@ -68,7 +67,6 @@ include 'koneksi.php';
 
 <body>
 
-<?php include 'layout/header.php'; ?>
 
 <div class="text-center py-5 shadow-sm" style="background: linear-gradient(rgba(183, 110, 121, 0.82), rgba(141, 79, 92, 0.82)), url('assets/gambar/bg-bouquet.jpg') center/cover; color: white;">
     <div class="container py-3">
@@ -165,6 +163,5 @@ include 'koneksi.php';
 <?php include 'layout/footer.php'; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
 </body>
 </html>

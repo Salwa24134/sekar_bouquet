@@ -32,9 +32,9 @@ if (isset($_POST['login'])) {
 
         if ($loginOK) {
             // Mendaftarkan data penting user ke dalam SESSION global
-            $_SESSION['id_user']  = $user['id']; // Ditambahkan untuk relasi transaksi jika diperlukan
+            $_SESSION['id_user'] = $user['id'];
             $_SESSION['username'] = $user['username'];
-            $_SESSION['role']     = strtolower($user['role']);
+            $_SESSION['role'] = strtolower($user['role']);
             $_SESSION['foto']     = $user['foto'];
 
             // Redireksi halaman berdasarkan hak akses (Role)

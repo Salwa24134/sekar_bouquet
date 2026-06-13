@@ -89,77 +89,61 @@ include 'koneksi.php';
 
             <ul class="navbar-nav ms-auto align-items-center">
 
-                <?php if (isset($_SESSION['user']['username'])): ?>
+            <?php if (isset($_SESSION['username'])): ?>
 
-                    <?php $user = $_SESSION['user']; ?>
+                <li class="nav-item dropdown">
 
-                    <?php if (isset($user['role']) && $user['role'] === 'admin'): ?>
-                        <a href="admin.php"
-                           class="btn btn-warning rounded-pill me-3 fw-bold shadow-sm">
-                            <i class="fa fa-gear me-1"></i> Admin
-                        </a>
-                    <?php endif; ?>
+                    <a class="nav-link dropdown-toggle text-white d-flex align-items-center"
+                    href="#"
+                    id="userMenu"
+                    role="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false">
 
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-white d-flex align-items-center"
-                           href="#"
-                           id="userDropdown"
-                           role="button"
-                           data-bs-toggle="dropdown"
-                           aria-expanded="false">
+                        <i class="fa fa-user-circle me-2"></i>
+                        Hai, <?= htmlspecialchars($_SESSION['username']); ?>
+                    </a>
 
-                            <?php
-                            $foto = $user['foto'] ?? '';
-                            // Normalisasi direktori folder foto (diubah ke assets/gambar agar selaras dengan modul users_admin)
-                            $fotoPath = (!empty($foto) && file_exists("assets/gambar/".$foto))
-                                ? "assets/gambar/".$foto
-                                : "assets/gambar/default.png";
-                            ?>
+                    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userMenu">
 
-                            <img src="<?php echo $fotoPath; ?>"
-                                 class="rounded-circle me-2 border border-2 border-light"
-                                 style="width:38px;height:38px;object-fit:cover;"
-                                 alt="User Avatar">
+                        <li>
+                            <a class="dropdown-item" href="riwayat_pesanan.php">
+                                <i class="fa fa-bag-shopping me-2"></i>
+                                Riwayat Pesanan
+                            </a>
+                        </li>
 
-                            Hai, <?php echo htmlspecialchars($user['username']); ?> 🌸
-                        </a>
+                        <li><hr class="dropdown-divider"></li>
 
-                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-3" aria-labelledby="userDropdown">
-                            <li>
-                                <a class="dropdown-item py-2" href="profil_user.php">
-                                    <i class="fa fa-user me-2"></i> Profil
-                                </a>
-                            </</li>
-                            <li>
-                                <a class="dropdown-item py-2" href="riwayat_pesanan.php">
-                                    <i class="fa fa-bag-shopping me-2"></i> Riwayat Pesanan
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item py-2 text-danger fw-bold" href="logout.php">
-                                    <i class="fa fa-right-from-bracket me-2"></i> Logout
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="logout.php">
+                                <i class="fa fa-right-from-bracket me-2"></i>
+                                Logout
+                            </a>
+                        </li>
 
-                <?php else: ?>
+                    </ul>
 
-                    <a href="login.php"
-                       class="btn btn-outline-light rounded-pill me-2 px-3">
+                </li>
+
+            <?php else: ?>
+
+                <li class="nav-item me-2">
+                    <a href="login.php" class="btn btn-outline-light rounded-pill px-3">
                         Login
                     </a>
-                    <a href="register.php"
-                       class="btn btn-light rounded-pill fw-bold px-3"
-                       style="color:#b76e79;">
+                </li>
+
+                <li class="nav-item">
+                    <a href="register.php" class="btn btn-light rounded-pill fw-bold px-3"
+                    style="color:#b76e79;">
                         Register
                     </a>
+                </li>
 
-                <?php endif; ?>
+            <?php endif; ?>
 
             </ul>
-
         </div>
     </div>
 </nav>

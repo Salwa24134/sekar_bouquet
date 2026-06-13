@@ -52,6 +52,24 @@ if (isset($_POST['register'])) {
                 $stmtIns->bind_param("sssss", $username, $email, $password, $role, $fotoName);
 
                 if ($stmtIns->execute()) {
+
+                    $id_user_baru = $koneksi->insert_id;
+
+                    $stmtPelanggan = $koneksi->prepare(
+                        "INSERT INTO pelanggan (id_pelanggan, nama, email)
+                        VALUES (?, ?, ?)"
+                    );
+
+                    $stmtPelanggan->bind_param(
+                        "iss",
+                        $id_user_baru,
+                        $username,
+                        $email
+                    );
+
+                    $stmtPelanggan->execute();
+                    $stmtPelanggan->close();
+
                     $success = "Akun berhasil dibuat!";
                 } else {
                     $error = "Gagal membuat akun!";

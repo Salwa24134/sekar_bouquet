@@ -286,3 +286,50 @@ FROM detail_pesanan dp
 JOIN produk p
 ON dp.id_produk = p.id_produk
 GROUP BY p.id_produk;
+
+
+-- baru 13/06/2026--
+-- VIEW (RIWAYAT PESANAN + NAMA BARANG)
+CREATE VIEW v_riwayat_pesanan AS
+SELECT 
+    p.id_pesanan,
+    p.id_pelanggan,
+    p.tanggal,
+    p.total,
+    p.status,
+    p.metode_pembayaran,
+    pr.nama_produk,
+    dp.jumlah
+FROM pesanan p
+JOIN detail_pesanan dp ON p.id_pesanan = dp.id_pesanan
+JOIN produk pr ON dp.id_produk = pr.id_produk;
+
+-- TRIGGER (OTOMATIS KURANG STOK)
+DELIMITER //
+
+CREATE TRIGGER kurang_stok
+AFTER INSERT ON detail_pesanan
+FOR EACH ROW
+BEGIN
+    UPDATE produk
+    SET stok = stok - NEW.jumlah
+    WHERE id_produk = NEW.id_produk;
+END//
+
+DELIMITER ;
+
+-- TRIGGER TAMBAH STOK JIKA PESANAN DIBATALKAN
+DELIMITER //
+
+CREATE TRIGGER tambah_stok
+AFTER DELETE ON detail_pesanan
+FOR EACH ROW
+BEGIN
+    UPDATE produk
+    SET stok = stok + OLD.jumlah
+    WHERE id_produk = OLD.id_produk;
+END//
+
+DELIMITER ;
+
+

@@ -2,217 +2,215 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
 include 'koneksi.php';
 
-/* =========================
-   PROTEKSI LOGIN
-========================= */
-if (!isset($_SESSION['user'])) {
+if (!isset($_SESSION['id_user'])) {
     header("Location: login.php");
     exit();
 }
 
-$username = $_SESSION['user']['username'];
+$id_user = $_SESSION['id_user'];
 
-/* =========================
-   AMBIL DATA PESANAN USER (MySQLi)
-========================= */
-$sql = "
-    SELECT *
-    FROM pesanan_header
-    WHERE nama = ?
-    ORDER BY id DESC
-";
-
+$sql = "SELECT * FROM pesanan WHERE id_pelanggan = ? ORDER BY id_pesanan DESC";
 $stmt = $koneksi->prepare($sql);
-$stmt->bind_param("s", $username);
+$stmt->bind_param("i", $id_user);
 $stmt->execute();
 $result = $stmt->get_result();
 ?>
 
 <!DOCTYPE html>
-<html lang="id">
-
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Riwayat Pesanan - Sekar Bouquet</title>
+<title>Riwayat Pesanan</title>
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: #fff4f7;
-        }
+<style>
+body{
+    background:#fff5f7;
+    font-family:poppins;
+}
 
-        h1, h2, h3, h4 {
-            font-family: 'Playfair Display', serif;
-            color: #b76e79;
-        }
+/* GRID */
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+    gap:14px;
+}
 
-        .card-bouquet {
-            background: white;
-            border: none;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(183,110,121,0.15);
-        }
+/* CARD */
+.card-order{
+    background:#fff;
+    border:none;
+    border-radius:16px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.08);
+    overflow:hidden;
+}
 
-        .table thead {
-            background: #b76e79;
-            color: white;
-        }
+/* IMAGE */
+.header-img{
+    width:100%;
+    height:120px;
+    object-fit:cover;
+}
 
-        .btn-main {
-            background: linear-gradient(135deg, #d88b9c, #b76e79);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            padding: 8px 14px;
-            font-weight: 600;
-            text-decoration: none;
-        }
+/* CONTENT */
+.content{
+    padding:10px;
+    font-size:13px;
+}
 
-        .btn-main:hover {
-            color: white;
-            transform: translateY(-2px);
-        }
+.badge{
+    font-size:11px;
+    padding:4px 8px;
+    border-radius:8px;
+}
 
-        .badge-status {
-            padding: 6px 12px;
-            border-radius: 10px;
-            font-size: 12px;
-            font-weight: 600;
-        }
+.pending{background:#ffc107;}
+.proses{background:#0d6efd;color:#fff;}
+.selesai{background:#198754;color:#fff;}
 
-        /* status warna */
-        .pending {
-            background: #ffc107;
-            color: black;
-        }
+/* PRODUCT */
+.product-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12px;
+    margin-bottom:6px;
+}
 
-        .proses {
-            background: #0d6efd;
-            color: white;
-        }
+.product-img{
+    width:32px;
+    height:32px;
+    border-radius:6px;
+    object-fit:cover;
+}
 
-        .selesai {
-            background: #198754;
-            color: white;
-        }
-    </style>
+.small-text{
+    font-size:12px;
+    color:#666;
+}
+
+/* BUTTON FIX */
+.btn-small{
+    font-size:12px;
+    border-radius:10px;
+}
+</style>
 </head>
 
 <body>
 
 <?php include 'layout/header.php'; ?>
 
-<div class="container py-5">
+<div class="container py-4">
 
-    <h1 class="text-center mb-4">Riwayat Pesanan 🌸</h1>
+<!-- HEADER BUTTON -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">Riwayat Pesanan 🌸</h5>
 
-    <div class="card card-bouquet p-4">
+    <a href="index.php" class="btn btn-outline-dark btn-sm btn-small">
+        ⬅ Kembali ke Beranda
+    </a>
+</div>
 
-        <div class="table-responsive">
+<div class="grid">
 
-            <table class="table table-hover align-middle">
+<?php while($row = $result->fetch_assoc()): ?>
 
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Tanggal</th>
-                        <th>Pembayaran</th>
-                        <th>Total</th>
-                        <th>Status</th>
-                        <th>Aksi</th>
-                    </tr>
-                </thead>
+<?php
+$id = $row['id_pesanan'];
 
-                <tbody>
+$status = strtolower(trim($row['status']));
 
-                <?php 
-                // Cek apakah data pesanan ada di database
-                if ($result && $result->num_rows > 0) { 
-                    while ($row = $result->fetch_assoc()) { 
-                        
-                        $status = strtolower($row['status']);
-                        $badgeClass = "pending";
+if ($status == 'selesai') {
+    $badge = "selesai";
+} elseif ($status == 'diproses') {
+    $badge = "proses";
+} else {
+    $badge = "pending";
+}
 
-                        if (strpos($status, "proses") !== false) {
-                            $badgeClass = "proses";
-                        } elseif (strpos($status, "selesai") !== false) {
-                            $badgeClass = "selesai";
-                        }
-                ?>
+$produk = $koneksi->query("
+SELECT pr.nama_produk, pr.gambar, dp.jumlah
+FROM detail_pesanan dp
+JOIN produk pr ON pr.id_produk = dp.id_produk
+WHERE dp.id_pesanan = $id
+");
 
-                        <tr>
-                            <td>#<?= htmlspecialchars($row['id']); ?></td>
+$first = $produk->fetch_assoc();
+?>
 
-                            <td>
-                                <?php 
-                                // MySQLi mengembalikan string, ubah ke format tanggal yang rapi
-                                if (!empty($row['tanggal'])) {
-                                    echo date('Y-m-d H:i', strtotime($row['tanggal']));
-                                } else {
-                                    echo "-";
-                                }
-                                ?>
-                            </td>
+<div class="card-order">
 
-                            <td><?= htmlspecialchars($row['pembayaran']); ?></td>
+<?php if(!empty($first['gambar'])): ?>
+<img src="assets/gambar/<?= $first['gambar']; ?>" class="header-img">
+<?php endif; ?>
 
-                            <td class="fw-bold text-danger">
-                                Rp <?= number_format($row['total'], 0, ',', '.'); ?>
-                            </td>
+<div class="content">
 
-                            <td>
-                                <span class="badge-status <?= $badgeClass; ?>">
-                                    <?= htmlspecialchars($row['status']); ?>
-                                </span>
-                            </td>
+<div class="d-flex justify-content-between">
+    <b>#<?= $id; ?></b>
+    <span class="badge <?= $badge; ?>"><?= $row['status']; ?></span>
+</div>
 
-                            <td>
-                                <a href="detail_pesanan.php?id=<?= urlencode($row['id']); ?>" 
-                                   class="btn btn-main btn-sm">
-                                     Detail
-                                </a>
+<div class="small-text mt-1">
+<?= $row['tanggal']; ?>
+</div>
 
-                                <a href="cetak_pdf.php?id=<?= urlencode($row['id']); ?>" 
-                                   class="btn btn-secondary btn-sm">
-                                     Nota
-                                </a>
-                            </td>
-                        </tr>
+<hr>
 
-                    <?php } ?>
-                <?php 
-                } else { 
-                ?>
+<?php
+$produk2 = $koneksi->query("
+SELECT pr.nama_produk, pr.gambar, dp.jumlah
+FROM detail_pesanan dp
+JOIN produk pr ON pr.id_produk = dp.id_produk
+WHERE dp.id_pesanan = $id
+");
 
-                    <tr>
-                        <td colspan="6" class="text-center py-5 text-muted">
-                            Belum ada pesanan 🌸
-                        </td>
-                    </tr>
+while($p = $produk2->fetch_assoc()):
+?>
 
-                <?php } ?>
-
-                </tbody>
-
-            </table>
-
-        </div>
-
+<div class="product-item">
+    <img src="assets/gambar/<?= $p['gambar']; ?>" class="product-img">
+    <div>
+        <?= $p['nama_produk']; ?>
+        <div class="small-text">x<?= $p['jumlah']; ?></div>
     </div>
+</div>
+
+<?php endwhile; ?>
+
+<hr>
+
+<div class="small-text">
+Total: <b>Rp <?= number_format($row['total'],0,',','.'); ?></b>
+</div>
+
+<div class="mt-2">
+
+<?php if(strtolower($row['status']) == 'selesai'): ?>
+    <a href="nota.php?id=<?= $id; ?>" class="btn btn-success btn-sm w-100 btn-small">
+        Cetak Nota
+    </a>
+<?php else: ?>
+    <div class="text-warning small">
+        Menunggu verifikasi admin
+    </div>
+<?php endif; ?>
 
 </div>
 
-<?php 
-$stmt->close();
-include 'layout/footer.php'; 
-?>
+</div>
+</div>
+
+<?php endwhile; ?>
+
+</div>
+</div>
+
+<?php include 'layout/footer.php'; ?>
 
 </body>
 </html>

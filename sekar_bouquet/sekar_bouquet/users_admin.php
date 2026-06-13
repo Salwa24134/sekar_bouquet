@@ -170,7 +170,7 @@ $resultData = $koneksi->query($sql);
                 ?>
                         <tr>
                             <td>
-                                <img src="assets/gambar/<?= !empty($row['foto']) ? htmlspecialchars($row['foto']) : 'default.png'; ?>"
+                                <img src="assets/foto/<?= !empty($row['foto']) ? htmlspecialchars($row['foto']) : 'default.png'; ?>"
                                      class="user-avatar" alt="Avatar">
                             </td>
 
