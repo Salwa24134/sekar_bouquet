@@ -94,61 +94,86 @@ if (isset($_GET['edit'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
     <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background: #fff4f7;
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background: #fff4f7; 
+            margin: 0;
+            padding: 0;
+        }
+        h2, h3, h4, h5 { 
+            font-family: 'Playfair Display', serif; 
+            color: #b76e79; 
         }
 
-        h2, h3 {
-            font-family: 'Playfair Display', serif;
-            color: #b76e79;
-        }
-
+        /* --- STYLE SIDEBAR SINKRON (SAMA RATA) --- */
         .sidebar {
-            width: 250px;
+            width: 260px;
             height: 100vh;
-            background: linear-gradient(135deg, #b76e79, #8d4f5c);
+            background: #b26a7a; /* Warna mauve/pink gelap sesuai gambar */
             position: fixed;
-            padding: 20px;
+            top: 0;
+            left: 0;
+            padding: 30px 24px;
             color: white;
+            z-index: 1000;
         }
-
         .sidebar h3 {
-            color: white;
+            color: white !important;
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 2rem !important;
         }
-
         .sidebar a {
-            display: block;
-            color: white;
-            padding: 10px;
+            display: flex;
+            align-items: center;
+            color: #f5e6e8; /* Teks putih agak soft */
+            padding: 12px 16px;
             text-decoration: none;
-            margin-bottom: 10px;
-            border-radius: 10px;
+            margin-bottom: 12px;
+            border-radius: 14px;
+            font-weight: 500;
+            font-size: 1.05rem;
+            transition: all 0.2s ease;
         }
-
+        .sidebar a i {
+            font-size: 1.2rem;
+            width: 30px; /* Jarak icon seragam */
+        }
+        /* Efek hover lembut saat kursor menyentuh menu */
         .sidebar a:hover {
-            background: rgba(255,255,255,0.2);
-        }
-
-        .main {
-            margin-left: 260px;
-            padding: 30px;
-        }
-
-        .card-box {
-            border: none;
-            border-radius: 18px;
-            box-shadow: 0 10px 25px rgba(183,110,121,0.15);
-        }
-
-        .btn-main {
-            background: linear-gradient(135deg, #d88b9c, #b76e79);
+            background: rgba(255, 255, 255, 0.15);
             color: white;
-            border: none;
         }
 
-        .btn-main:hover {
-            color: white;
+        /* --- STYLE KONTEN UTAMA --- */
+        .main { 
+            margin-left: 260px; 
+            padding: 40px; 
+        }
+        .card-box { 
+            border: none; 
+            border-radius: 18px; 
+            box-shadow: 0 10px 25px rgba(183,110,121,0.08); 
+        }
+        .bg-gradient-pink { 
+            background: linear-gradient(135deg, #d88b9c, #b76e79); 
+            color: white; 
+        }
+        .btn-main { 
+            background: linear-gradient(135deg, #d88b9c, #b76e79); 
+            color: white; 
+            border: none; 
+            border-radius: 12px;
+            padding: 10px 20px;
+        }
+        .btn-main:hover { 
+            color: white; 
+            opacity: 0.9; 
+        }
+        .table-responsive {
+            background: white;
+            border-radius: 12px;
+            padding: 10px;
         }
     </style>
 </head>

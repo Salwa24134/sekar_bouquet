@@ -98,15 +98,11 @@ if (isset($_POST['register'])) {
 
     <style>
         body {
-            background:
-                linear-gradient(rgba(255,255,255,0.55),
-                rgba(255,255,255,0.55)),
-                url('assets/gambar/bg-bouquet.jpg');
+            background: linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url('assets/gambar/bg-bouquet.jpg');
             background-size: cover;
             background-position: center;
             font-family: 'Poppins', sans-serif;
         }
-
         .register-card {
             background: rgba(255,255,255,0.93);
             backdrop-filter: blur(12px);
@@ -115,7 +111,6 @@ if (isset($_POST['register'])) {
             padding: 40px 35px;
             box-shadow: 0 15px 40px rgba(181, 131, 141, 0.25);
         }
-
         .register-logo {
             width: 90px;
             height: 90px;
@@ -124,25 +119,21 @@ if (isset($_POST['register'])) {
             border: 4px solid #f7d7dd;
             margin-bottom: 15px;
         }
-
         .register-title {
             font-family: 'Playfair Display', serif;
             color: #b76e79;
             font-size: 2.2rem;
             font-weight: 700;
         }
-
         .register-subtitle {
             color: #8a6f77;
             font-size: 0.95rem;
         }
-
         .form-label {
             color: #a15c6d;
             font-weight: 600;
             font-size: 0.9rem;
         }
-
         .input-group {
             border-radius: 14px;
             overflow: hidden;
@@ -150,27 +141,22 @@ if (isset($_POST['register'])) {
             transition: 0.3s;
             background: white;
         }
-
         .input-group:focus-within {
             border-color: #d88b9c;
             box-shadow: 0 0 0 0.25rem rgba(216, 139, 156, 0.2);
         }
-
         .input-group-text {
             background: white;
             border: none;
             color: #c17b8c;
         }
-
         .form-control {
             border: none;
             padding: 12px;
         }
-
         .form-control:focus {
             box-shadow: none;
         }
-
         .btn-register {
             background: linear-gradient(135deg, #d88b9c, #b76e79);
             border: none;
@@ -180,29 +166,21 @@ if (isset($_POST['register'])) {
             font-weight: 600;
             transition: 0.3s;
         }
-
         .btn-register:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(183, 110, 121, 0.35);
         }
-
         .login-link {
             color: #b76e79;
             text-decoration: none;
             font-weight: 600;
         }
-
         .login-link:hover {
             color: #9c5b6b;
             text-decoration: underline;
         }
-
         .alert {
             border-radius: 12px;
-        }
-
-        .form-text {
-            color: #8a6f77;
         }
     </style>
 </head>
@@ -219,15 +197,12 @@ if (isset($_POST['register'])) {
                 <div class="text-center mb-4">
                     <img src="assets/gambar/logo.jpeg" alt="Sekar Bouquet" class="register-logo">
                     <h2 class="register-title">Buat Akun Baru</h2>
-                    <p class="register-subtitle">
-                        Gabung bersama Sekar Bouquet dan temukan bunga favoritmu 🌷
-                    </p>
+                    <p class="register-subtitle">Gabung bersama Sekar Bouquet dan temukan bunga favoritmu 🌷</p>
                 </div>
 
                 <?php if (isset($success)) : ?>
                     <div class="alert alert-success text-center fw-bold small">
-                        <i class="fa-solid fa-circle-check me-2"></i>
-                        <?php echo htmlspecialchars($success); ?>
+                        <i class="fa-solid fa-circle-check me-2"></i> <?php echo htmlspecialchars($success); ?>
                         <div class="mt-2">
                             <a href="login.php" class="login-link">Login sekarang</a>
                         </div>
@@ -236,19 +211,16 @@ if (isset($_POST['register'])) {
 
                 <?php if (isset($error)) : ?>
                     <div class="alert alert-danger text-center fw-bold small">
-                        <i class="fa-solid fa-circle-exclamation me-2"></i>
-                        <?php echo htmlspecialchars($error); ?>
+                        <i class="fa-solid fa-circle-exclamation me-2"></i> <?php echo htmlspecialchars($error); ?>
                     </div>
                 <?php endif; ?>
 
                 <form method="post" enctype="multipart/form-data">
-
                     <div class="mb-3">
                         <label class="form-label">Username</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
-                            <input type="text" name="username" class="form-control" 
-                                   placeholder="Masukkan username" required>
+                            <input type="text" name="username" class="form-control" placeholder="Masukkan username" required>
                         </div>
                     </div>
 
@@ -256,8 +228,7 @@ if (isset($_POST['register'])) {
                         <label class="form-label">Email</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
-                            <input type="email" name="email" class="form-control" 
-                                   placeholder="Masukkan email aktif" required>
+                            <input type="email" name="email" class="form-control" placeholder="Masukkan email aktif" required>
                         </div>
                     </div>
 
@@ -265,8 +236,7 @@ if (isset($_POST['register'])) {
                         <label class="form-label">Password</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-                            <input type="password" name="password" class="form-control" 
-                                   placeholder="Buat password" required>
+                            <input type="password" name="password" class="form-control" placeholder="Buat password" required>
                         </div>
                     </div>
 
@@ -274,24 +244,18 @@ if (isset($_POST['register'])) {
                         <label class="form-label">Foto Profil</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fa-solid fa-image"></i></span>
-                            <input type="file" name="foto" class="form-control" 
-                                   accept="image/*" required>
+                            <input type="file" name="foto" class="form-control" accept="image/*" required>
                         </div>
-                        <div class="form-text small mt-2">
-                            Gunakan foto terbaikmu untuk profil akun 🌸
-                        </div>
+                        <div class="form-text small mt-2">Gunakan foto terbaikmu untuk profil akun 🌸</div>
                     </div>
 
                     <button type="submit" name="register" class="btn btn-register w-100 mb-4">
                         <i class="fa-solid fa-user-plus me-2"></i> Daftar Sekarang
                     </button>
-
                 </form>
 
                 <div class="text-center">
-                    <p class="small text-muted mb-0">
-                        Sudah punya akun? <a href="login.php" class="login-link">Login disini</a>
-                    </p>
+                    <p class="small text-muted mb-0">Sudah punya akun? <a href="login.php" class="login-link">Login disini</a></p>
                 </div>
             </div>
 

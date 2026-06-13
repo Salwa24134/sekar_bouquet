@@ -17,12 +17,8 @@ if (empty($_POST['produk_id'])) {
 $produkDipilih = $_POST['produk_id'];
 $jumlahDipilih = $_POST['jumlah'] ?? [];
 
-// Ambil ID Pelanggan dari session login (karena tabelmu pakai id_pelanggan, bukan nama)
-// Jika di session login kamu menyimpannya dengan nama lain (misal $_SESSION['id_user']), silakan sesuaikan ganti bagian ini.
-// Sesuaikan isi di dalam tanda petik dengan nama session login milikmu
 $id_pelanggan = $_SESSION['id_pelanggan'] ?? $_SESSION['id_user'] ?? $_SESSION['id'] ?? null; 
 
-// Jika session benar-benar kosong/user belum login, tendang ke halaman login
 if (!$id_pelanggan) {
     echo "<script>
         alert('Sesi Anda telah habis atau Anda belum login. Silakan login kembali.');
@@ -31,9 +27,24 @@ if (!$id_pelanggan) {
     exit();
 }
 
-$pembayaran   = $_POST['pembayaran'] ?? '';
-$total        = 0;
-$detailData   = [];
+// Menangkap data input baru dari Form Checkout
+$no_hp           = $_POST['no_hp'] ?? '';
+$alamat          = $_POST['alamat'] ?? '';
+$waktu_kirim     = $_POST['waktu_kirim'] ?? '';
+$catatan_kartu   = $_POST['catatan_kartu'] ?? '';
+$catatan_custom  = $_POST['catatan_custom'] ?? '';
+$pembayaran      = $_POST['pembayaran'] ?? '';
+$total           = 0;
+$detailData      = [];
+
+// Gabungkan catatan kartu, kustomisasi, & waktu kirim agar masuk ke sistem riwayat admin
+$gabung_catatan = "Catatan Custom: " . $catatan_custom;
+if (!empty($catatan_kartu)) {
+    $gabung_catatan .= " | Isi Kartu Ucapan: " . $catatan_kartu;
+}
+if (!empty($waktu_kirim)) {
+    $gabung_catatan .= " | Batas Waktu Kirim: " . $waktu_kirim;
+}
 
 /* =====================================================
    1. VALIDASI + HITUNG PRODUK
@@ -77,10 +88,12 @@ foreach ($produkDipilih as $id) {
    2. UPLOAD BUKTI PEMBAYARAN
 ===================================================== */
 $buktiName = "";
-$file = $_FILES['bukti_transfer'] ?? null;
+$file = null;
 
-if (!$file || $file['error'] != 0) {
-    $file = $_FILES['bukti_qris'] ?? null;
+if (!empty($_FILES['bukti_transfer']['name'])) {
+    $file = $_FILES['bukti_transfer'];
+} elseif (!empty($_FILES['bukti_qris']['name'])) {
+    $file = $_FILES['bukti_qris'];
 }
 
 if ($file && $file['error'] == 0) {
@@ -93,109 +106,99 @@ if ($file && $file['error'] == 0) {
     move_uploaded_file($file['tmp_name'], $folder . $buktiName);
 }
 
-
 /* =====================================================
-   3. INSERT KE TABEL UTAMA (pesanan) -> FIXED SESUAI STRUKTUR KAMU
+   3. CEK / UPDATE DATA PELANGGAN
 ===================================================== */
-// Kolom pas dari phpMyAdmin kamu: id_pelanggan, tanggal, total, status, metode_pembayaran, bukti
-$sqlInsert = "
-INSERT INTO pesanan
-(id_pelanggan, tanggal, total, status, metode_pembayaran, bukti)
-VALUES
-(?, NOW(), ?, 'Menunggu Pembayaran', ?, ?)
-";
-
-$cekPelanggan = $koneksi->prepare(
-    "SELECT id_pelanggan
-     FROM pelanggan
-     WHERE id_pelanggan=?"
-);
-
+$cekPelanggan = $koneksi->prepare("SELECT id_pelanggan FROM pelanggan WHERE id_pelanggan = ?");
 $cekPelanggan->bind_param("i", $id_pelanggan);
 $cekPelanggan->execute();
-
 $resCek = $cekPelanggan->get_result();
 
 if ($resCek->num_rows == 0) {
-
     $username = $_SESSION['username'];
-
-    $stmtTambah = $koneksi->prepare(
-        "INSERT INTO pelanggan
-        (id_pelanggan,nama,email,telepon,alamat)
-        VALUES (?, ?, '', '', '')"
-    );
-
-    $stmtTambah->bind_param(
-        "is",
-        $id_pelanggan,
-        $username
-    );
-
+    $email_input = $_POST['email'] ?? '';
+    $stmtTambah = $koneksi->prepare("INSERT INTO pelanggan (id_pelanggan, nama, email, telepon, alamat) VALUES (?, ?, ?, ?, ?)");
+    $stmtTambah->bind_param("issss", $id_pelanggan, $username, $email_input, $no_hp, $alamat);
     $stmtTambah->execute();
     $stmtTambah->close();
+} else {
+    $stmtUpdatePel = $koneksi->prepare("UPDATE pelanggan SET telepon = ?, alamat = ? WHERE id_pelanggan = ?");
+    $stmtUpdatePel->bind_param("ssi", $no_hp, $alamat, $id_pelanggan);
+    $stmtUpdatePel->execute();
+    $stmtUpdatePel->close();
 }
-
 $cekPelanggan->close();
 
+/* =====================================================
+   4. INSERT KE TABEL UTAMA (pesanan)
+===================================================== */
+// NOTE: Jika tabel pesanan kamu punya kolom 'waktu_kirim', kamu bisa mengubah query di bawah ini.
+// Di sini saya masukkan 'waktu_kirim' ke dalam string bouquet agar aman tanpa merubah struktur tabel.
+$sqlInsert = "INSERT INTO pesanan (id_pelanggan, tanggal, total, status, metode_pembayaran, bukti) VALUES (?, NOW(), ?, 'Menunggu Pembayaran', ?, ?)";
 $stmtHeader = $koneksi->prepare($sqlInsert);
 
 if (!$stmtHeader) {
     die("<b>Gagal Prepare Query Tabel Utama!</b> Error MySQL: " . $koneksi->error);
 }
 
-// "iiss" artinya: int (id_pelanggan), int (total), string (pembayaran), string (buktiName)
 $stmtHeader->bind_param("iiss", $id_pelanggan, $total, $pembayaran, $buktiName);
 
-
 if (!$stmtHeader->execute()) {
-    die(
-        "Gagal simpan pesanan : "
-        . $stmtHeader->error
-    );
+    die("Gagal simpan pesanan : " . $stmtHeader->error);
 }
 
 $id_pesanan = $koneksi->insert_id;
 $stmtHeader->close();
 
-/* =========================
-   ANTI DOUBLE ORDER (WAJIB)
-========================= */
+/* ==============================================
+   ANTI DOUBLE ORDER
+============================================== */
 if (isset($_SESSION['last_order_id']) && $_SESSION['last_order_id'] == $id_pesanan) {
     header("Location: riwayat_pesanan.php");
     exit();
 }
-
 $_SESSION['last_order_id'] = $id_pesanan;
 
 /* =====================================================
-   4. INSERT KE DETAIL (detail_pesanan) -> FIXED SESUAI STRUKTUR KAMU
+   5. INSERT KE TABEL BUKET CUSTOM (bouquet_custom)
+===================================================== */
+$nama_bouquet = "Custom Bouquet #" . $id_pesanan;
+$ongkos_rakit = 15000; 
+
+$sqlCustom = "INSERT INTO bouquet_custom (id_pesanan, nama_bouquet, catatan, ongkos_rakit) VALUES (?, ?, ?, ?)";
+$stmtCustom = $koneksi->prepare($sqlCustom);
+if ($stmtCustom) {
+    $stmtCustom->bind_param("issi", $id_pesanan, $nama_bouquet, $gabung_catatan, $ongkos_rakit);
+    $stmtCustom->execute();
+    $id_bouquet = $stmtCustom->insert_id; 
+    $stmtCustom->close();
+}
+
+/* =====================================================
+   6. INSERT KE DETAIL PESANAN & DETAIL BOUQUET
 ===================================================== */
 if ($id_pesanan > 0) {
     foreach ($detailData as $p) {
-        
-        // Memakai kolom valid kamu: id_pesanan, id_produk, jumlah, harga, subtotal
-        $sqlDetail = "
-            INSERT INTO detail_pesanan (id_pesanan, id_produk, jumlah, harga, subtotal) 
-            VALUES (?, ?, ?, ?, ?)
-        ";
-        
+        $sqlDetail = "INSERT INTO detail_pesanan (id_pesanan, id_produk, jumlah, harga, subtotal) VALUES (?, ?, ?, ?, ?)";
         $stmtDetail = $koneksi->prepare($sqlDetail);
-        
         if (!$stmtDetail) {
             die("<b>Gagal simpan rincian pesanan!</b> Error MySQL: " . $koneksi->error);
         }
-
         $stmtDetail->bind_param("iiiii", $id_pesanan, $p['id'], $p['qty'], $p['harga'], $p['subtotal']);
         $stmtDetail->execute();
         $stmtDetail->close();
 
-        // Mengurangi stok item di tabel produk
-        $stmtStok = $koneksi->prepare("UPDATE produk SET stok = stok - ? WHERE id_produk = ?");
-        $stmtStok->bind_param("ii", $p['qty'], $p['id']);
-        $stmtStok->execute();
-        $stmtStok->close();
+        if (isset($id_bouquet) && $id_bouquet > 0) {
+            $sqlDetailBuket = "INSERT INTO detail_bouquet (id_bouquet, id_produk, jumlah) VALUES (?, ?, ?)";
+            $stmtDetailBuket = $koneksi->prepare($sqlDetailBuket);
+            if ($stmtDetailBuket) {
+                $stmtDetailBuket->bind_param("iii", $id_bouquet, $p['id'], $p['qty']);
+                $stmtDetailBuket->execute();
+                $stmtDetailBuket->close();
+            }
+        }
     }
+    unset($_SESSION['keranjang']);
 } else {
     die("Gagal mendapatkan ID Utama transaksi.");
 }
@@ -213,39 +216,100 @@ if (!isset($id_pesanan)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pesanan Berhasil - Sekar Bouquet</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #fcf8f8; }
+        .font-serif { font-family: 'Playfair Display', serif; }
+        .success-card { background: #ffffff; border: none; border-radius: 24px; box-shadow: 0 10px 30px rgba(183, 110, 121, 0.08); overflow: hidden; }
+        .icon-bounce { animation: bounce 2s infinite; display: inline-block; color: #b76e79; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .invoice-box { background-color: #fffafb; border: 1px dashed #e8cbd0; border-radius: 16px; }
+        .btn-primary-custom { background: #b76e79; color: white; border: none; border-radius: 12px; padding: 12px 24px; font-weight: 500; transition: all 0.3s ease; }
+        .btn-primary-custom:hover { background: #a35c67; color: white; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(183, 110, 121, 0.3); }
+        .btn-outline-custom { border: 1px solid #b76e79; color: #b76e79; border-radius: 12px; padding: 12px 24px; font-weight: 500; transition: all 0.3s ease; }
+        .btn-outline-custom:hover { background: #fff0f2; color: #a35c67; border-color: #a35c67; }
+        .alert-custom { background-color: #fff3cd; border-left: 4px solid #ffc107; color: #664d03; border-radius: 12px; }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
 <?php include 'layout/header.php'; ?>
 
-<div class="container text-center py-5">
-    <div class="card p-5 shadow-sm mx-auto" style="max-width: 600px; border-radius: 20px; background: white;">
-        <h1 class="text-success fw-bold mb-3">Pesanan Berhasil 🎉</h1>
-        <p class="fs-5 text-muted">Terima kasih. Pesanan buket kamu sedang kami proses.</p>
-        
-        <div class="my-4 p-3 bg-light rounded text-start">
-            <p class="mb-1"><b>ID Pesanan:</b> #<?php echo $id_pesanan; ?></p>
-            <p class="mb-1"><b>Metode Pembayaran:</b> <?php echo htmlspecialchars($pembayaran); ?></p>
-            <p class="mb-0"><b>Total Transfer:</b> Rp <?php echo number_format($total, 0, ',', '.'); ?></p>
-        </div>
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card success-card p-4 p-sm-5 text-center">
+                <div class="mb-4">
+                    <span class="icon-bounce" style="font-size: 4.5rem;">
+                        <i class="bi bi-heart-pulse-fill"></i>
+                    </span>
+                </div>
+                
+                <h1 class="font-serif fw-bold text-dark mb-2">Pesanan Berhasil! 🎉</h1>
+                <p class="text-muted px-3 mb-4">Terima kasih banyak. Buket cantik pilihanmu sudah masuk antrean sistem dan siap dirangkai.</p>
+                
+                <div class="invoice-box p-4 text-start mb-4">
+                    <h5 class="fw-semibold mb-3 text-dark d-flex align-items-center">
+                        <i class="bi bi-receipt me-2 text-secondary"></i> Rincian Transaksi
+                    </h5>
+                    <hr class="text-muted opacity-25 my-2">
+                    
+                    <div class="row g-2 pt-2">
+                        <div class="col-5 text-muted">ID Pesanan</div>
+                        <div class="col-7 fw-medium text-dark text-end">#<?php echo $id_pesanan; ?></div>
+                        
+                        <div class="col-5 text-muted">Metode Bayar</div>
+                        <div class="col-7 fw-medium text-dark text-end">
+                            <span class="badge bg-light text-dark border px-2 py-1.5"><?php echo htmlspecialchars($pembayaran ?: 'Transfer'); ?></span>
+                        </div>
+                        
+                        <div class="col-5 text-muted align-self-center">Total Transfer</div>
+                        <div class="col-7 fw-bold text-end fs-5" style="color: #b76e79;">Rp <?php echo number_format($total, 0, ',', '.'); ?></div>
+                    </div>
+                    
+                    <?php if (!empty($catatan_custom) || !empty($catatan_kartu) || !empty($waktu_kirim)): ?>
+                        <hr class="text-muted opacity-25 my-3">
+                        <div class="bg-white p-3 rounded border border-light">
+                            <?php if(!empty($waktu_kirim)): ?>
+                                <p class="mb-1 small"><strong><i class="bi bi-calendar-event me-1"></i> Waktu Kirim:</strong></p>
+                                <p class="text-muted small mb-2"><?php echo htmlspecialchars($waktu_kirim); ?></p>
+                            <?php endif; ?>
 
-        <div class="alert alert-warning">
-            <strong>Menunggu Verifikasi Admin</strong><br>
-            Bukti pembayaran Anda sedang diperiksa.
-            Nota dapat dicetak setelah pembayaran diverifikasi admin.
-        </div>
+                            <?php if(!empty($catatan_custom)): ?>
+                                <p class="mb-1 small"><strong><i class="bi bi-pencil-square me-1"></i> Req Custom:</strong></p>
+                                <p class="text-muted small mb-2">"<?php echo htmlspecialchars($catatan_custom); ?>"</p>
+                            <?php endif; ?>
+                            
+                            <?php if(!empty($catatan_kartu)): ?>
+                                <p class="mb-1 small"><strong><i class="bi bi-card-text me-1"></i> Isi Kartu Ucapan:</strong></p>
+                                <p class="text-muted small mb-0">"<?php echo htmlspecialchars($catatan_kartu); ?>"</p>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
 
-        <a href="riwayat_pesanan.php"
-        class="btn btn-primary btn-lg w-100 mb-3">
-            lihat riwayat pesanan
-        </a>
-        <a href="index.php" class="btn btn-outline-secondary w-100" style="border-radius: 12px;">
-            Kembali ke Beranda
-        </a>
+                <div class="alert alert-custom text-start d-flex align-items-start gap-3 p-3 mb-4">
+                    <i class="bi bi-exclamation-triangle-fill fs-4 mt-1 flex-shrink-0"></i>
+                    <div>
+                        <strong class="d-block mb-1">Menunggu Verifikasi Admin</strong>
+                        <span class="small opacity-90">Bukti pembayaran kamu sedang kami validasi. Nota resmi aktif setelah diverifikasi oleh tim admin kami.</span>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <a href="riwayat_pesanan.php" class="btn btn-primary-custom btn-lg d-flex align-items-center justify-content-center gap-2">
+                        <i class="bi bi-clock-history"></i> Lihat Riwayat Pesanan
+                    </a>
+                    <a href="index.php" class="btn btn-outline-custom d-flex align-items-center justify-content-center gap-2">
+                        <i class="bi bi-house-door"></i> Kembali ke Beranda
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
 <?php include 'layout/footer.php'; ?>
-
 </body>
 </html>

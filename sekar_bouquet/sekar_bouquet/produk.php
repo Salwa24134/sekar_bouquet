@@ -112,7 +112,7 @@ $kategori_katalog = [
 </div>
 
 <div class="container mb-5 flex-grow-1">
-    <form method="post" action="checkout.php">
+    <form method="post" action="tambah_keranjang_banyak.php">
         <?php 
         $ada_produk_total = false;
         foreach ($kategori_katalog as $id_kategori => $nama_tampilan) {
@@ -169,7 +169,7 @@ $kategori_katalog = [
         <?php if ($ada_produk_total): ?>
             <div class="text-center mt-5">
                 <button type="submit" class="btn btn-main btn-lg px-5 shadow">
-                    <i class="fa-solid fa-bag-shopping me-2"></i> Lanjut ke Checkout
+                    <i class="fa-solid fa-basket-shopping me-2"></i> Masukkan ke Keranjang Belanja
                 </button>
             </div>
         <?php endif; ?>

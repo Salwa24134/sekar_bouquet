@@ -67,7 +67,6 @@ include 'layout/header.php';
 
 <body>
 
-
 <div class="text-center py-5 shadow-sm" style="background: linear-gradient(rgba(183, 110, 121, 0.82), rgba(141, 79, 92, 0.82)), url('assets/gambar/bg-bouquet.jpg') center/cover; color: white;">
     <div class="container py-3">
         <h1 class="fw-bold text-white text-uppercase">Sekar Bouquet 🌸</h1>

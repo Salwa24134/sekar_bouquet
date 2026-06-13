@@ -4,6 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 include 'koneksi.php';
 
+// Pastikan variabel error ter-inisialisasi string kosong di awal
 $error = "";
 
 if (isset($_POST['login'])) {
@@ -11,19 +12,16 @@ if (isset($_POST['login'])) {
     $username = trim($_POST['username']);
     $password = trim($_POST['password']);
 
-    // Menggunakan Prepared Statements MySQLi demi keamanan autentikasi
     $stmt = $koneksi->prepare("SELECT id, username, password, role, foto FROM users WHERE username = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $res = $stmt->get_result();
 
-    // Memeriksa keberadaan baris data di MySQLi
     if ($res && $res->num_rows > 0) {
 
         $user = $res->fetch_assoc();
         $loginOK = false;
 
-        // Validasi kecocokan password (hash berbasis password_hash maupun plain-text)
         if (password_verify($password, $user['password'])) {
             $loginOK = true;
         } elseif ($password === $user['password']) {
@@ -31,13 +29,13 @@ if (isset($_POST['login'])) {
         }
 
         if ($loginOK) {
-            // Mendaftarkan data penting user ke dalam SESSION global
-            $_SESSION['id_user'] = $user['id'];
-            $_SESSION['username'] = $user['username'];
-            $_SESSION['role'] = strtolower($user['role']);
-            $_SESSION['foto']     = $user['foto'];
+            // Mendaftarkan data penting ke dalam SESSION global secara sinkron
+            $_SESSION['id_user']      = $user['id'];
+            $_SESSION['id_pelanggan'] = $user['id']; // Ditambahkan agar sinkron dengan tabel pelanggan
+            $_SESSION['username']     = $user['username'];
+            $_SESSION['role']         = strtolower($user['role']);
+            $_SESSION['foto']         = $user['foto'];
 
-            // Redireksi halaman berdasarkan hak akses (Role)
             if ($_SESSION['role'] === 'admin') {
                 header("Location: admin.php");
             } else {
@@ -70,15 +68,11 @@ if (isset($_POST['login'])) {
 
     <style>
         body {
-            background:
-                linear-gradient(rgba(255,255,255,0.55),
-                rgba(255,255,255,0.55)),
-                url('assets/gambar/bg-bouquet.jpg');
+            background: linear-gradient(rgba(255,255,255,0.55), rgba(255,255,255,0.55)), url('assets/gambar/bg-bouquet.jpg');
             background-size: cover;
             background-position: center;
             font-family: 'Poppins', sans-serif;
         }
-
         .login-card {
             background: rgba(255,255,255,0.93);
             backdrop-filter: blur(12px);
@@ -87,7 +81,6 @@ if (isset($_POST['login'])) {
             padding: 40px 35px;
             box-shadow: 0 15px 40px rgba(181, 131, 141, 0.25);
         }
-
         .login-logo {
             width: 90px;
             height: 90px;
@@ -96,25 +89,21 @@ if (isset($_POST['login'])) {
             border: 4px solid #f7d7dd;
             margin-bottom: 15px;
         }
-
         .login-title {
             font-family: 'Playfair Display', serif;
             color: #b76e79;
             font-size: 2.2rem;
             font-weight: 700;
         }
-
         .login-subtitle {
             color: #8a6f77;
             font-size: 0.95rem;
         }
-
         .form-label {
             color: #a15c6d;
             font-weight: 600;
             font-size: 0.9rem;
         }
-
         .input-group {
             border-radius: 14px;
             overflow: hidden;
@@ -122,27 +111,22 @@ if (isset($_POST['login'])) {
             transition: 0.3s;
             background: white;
         }
-
         .input-group:focus-within {
             border-color: #d88b9c;
             box-shadow: 0 0 0 0.25rem rgba(216, 139, 156, 0.2);
         }
-
         .input-group-text {
             background: white;
             border: none;
             color: #c17b8c;
         }
-
         .form-control {
             border: none;
             padding: 12px;
         }
-
         .form-control:focus {
             box-shadow: none;
         }
-
         .btn-login {
             background: linear-gradient(135deg, #d88b9c, #b76e79);
             border: none;
@@ -152,23 +136,19 @@ if (isset($_POST['login'])) {
             font-weight: 600;
             transition: 0.3s;
         }
-
         .btn-login:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(183, 110, 121, 0.35);
         }
-
         .register-link {
             color: #b76e79;
             text-decoration: none;
             font-weight: 600;
         }
-
         .register-link:hover {
             color: #9c5b6b;
             text-decoration: underline;
         }
-
         .alert {
             border-radius: 12px;
         }
@@ -185,18 +165,14 @@ if (isset($_POST['login'])) {
 
             <div class="card login-card">
                 <div class="text-center mb-4">
-                    <img src="assets/gambar/logo.jpeg"
-                         class="login-logo"
-                         alt="Sekar Bouquet">
-
+                    <img src="assets/gambar/logo.jpeg" class="login-logo" alt="Sekar Bouquet">
                     <h2 class="login-title">Selamat Datang</h2>
                     <p class="login-subtitle">Masuk ke akun Sekar Bouquet 🌸</p>
                 </div>
 
                 <?php if ($error != "") { ?>
                     <div class="alert alert-danger text-center fw-bold small">
-                        <i class="fa-solid fa-circle-exclamation me-2"></i>
-                        <?php echo htmlspecialchars($error); ?>
+                        <i class="fa-solid fa-circle-exclamation me-2"></i> <?php echo htmlspecialchars($error); ?>
                     </div>
                 <?php } ?>
 
@@ -204,44 +180,26 @@ if (isset($_POST['login'])) {
                     <div class="mb-3">
                         <label class="form-label">Username</label>
                         <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="fa-solid fa-user"></i>
-                            </span>
-                            <input type="text"
-                                   name="username"
-                                   class="form-control"
-                                   placeholder="Masukkan username"
-                                   required>
+                            <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+                            <input type="text" name="username" class="form-control" placeholder="Masukkan username" required>
                         </div>
                     </div>
 
                     <div class="mb-4">
                         <label class="form-label">Password</label>
                         <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="fa-solid fa-lock"></i>
-                            </span>
-                            <input type="password"
-                                   name="password"
-                                   class="form-control"
-                                   placeholder="Masukkan password"
-                                   required>
+                            <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                            <input type="password" name="password" class="form-control" placeholder="Masukkan password" required>
                         </div>
                     </div>
 
-                    <button type="submit"
-                            name="login"
-                            class="btn btn-login w-100 mb-4">
-                        <i class="fa-solid fa-right-to-bracket me-2"></i>
-                        Login Sekarang
+                    <button type="submit" name="login" class="btn btn-login w-100 mb-4">
+                        <i class="fa-solid fa-right-to-bracket me-2"></i> Login Sekarang
                     </button>
                 </form>
 
                 <div class="text-center">
-                    <p class="small text-muted mb-0">
-                        Belum punya akun?
-                        <a href="register.php" class="register-link">Daftar di sini</a>
-                    </p>
+                    <p class="small text-muted mb-0">Belum punya akun? <a href="register.php" class="register-link">Daftar di sini</a></p>
                 </div>
             </div>
 
@@ -252,6 +210,5 @@ if (isset($_POST['login'])) {
 <?php include 'layout/footer.php'; ?>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
 </body>
 </html>
